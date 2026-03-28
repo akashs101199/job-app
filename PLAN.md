@@ -12,12 +12,31 @@ Transform the existing job search and tracking app into an **AI-powered autonomo
 
 | Layer | Tech | Status |
 |-------|------|--------|
-| Frontend | React 18, React Router, Bootstrap 5 | Functional |
-| Backend | Node.js, Express.js | Functional |
+| Frontend | React 18, React Router, Bootstrap 5 | Fully Restructured ✅ |
+| Backend | Node.js, Express.js | Fully Modularized ✅ |
 | Database | MySQL + Prisma ORM | Functional |
 | External API | RapidAPI JSearch (LinkedIn, Indeed, Glassdoor) | Integrated |
-| Auth | JWT (HTTP-only cookies) | Functional |
+| **Auth** | **JWT + OAuth2 + Token Refresh** | **MVP Complete** ✅ |
 | AI/ML | None | Not started |
+
+### Phase 0: Authentication Complete ✅
+
+**Completed (March 2025):**
+- ✅ Email/Password authentication with bcrypt hashing
+- ✅ Google OAuth 2.0 integration (backend + UI)
+- ✅ JWT access tokens (1h expiration)
+- ✅ Refresh token mechanism (7-day sessions)
+- ✅ Protected routes with RequireAuth middleware
+- ✅ Input validation middleware on all auth endpoints
+- ✅ Rate limiting on login (brute force protection)
+- ✅ Error handling consistency (network + validation errors)
+- ✅ XSS protection (user data escaping + null safety)
+- ✅ Session invalidation on logout (DB refresh token clearing)
+- ✅ Helmet.js security headers (HSTS, CSP, etc.)
+- ✅ Automatic token refresh on app load & every 50 minutes
+- ✅ Modular architecture (controllers, services, routes, middleware)
+
+**Ready for:** Phase 1 - Cover Letter & Cold Email Generator Agent
 
 ### Existing Features
 
@@ -30,11 +49,11 @@ Transform the existing job search and tracking app into an **AI-powered autonomo
 
 ### Known Issues to Fix First
 
-- [ ] Passwords stored in plaintext — migrate to bcrypt hashing
-- [ ] JWT secret hardcoded in source — move to `.env`
-- [ ] RapidAPI key exposed in client-side code — proxy through backend
-- [ ] No input sanitization — add validation middleware
-- [ ] Monolithic `Api/index.js` (383 lines) — split into routes/controllers/services
+- [x] Passwords stored in plaintext — migrate to bcrypt hashing
+- [x] JWT secret hardcoded in source — move to `.env`
+- [x] RapidAPI key exposed in client-side code — proxy through backend
+- [x] No input sanitization — add validation middleware
+- [x] Monolithic `Api/index.js` (383 lines) — split into routes/controllers/services
 - [ ] Console logs and `alert()` calls left in production code — clean up
 - [ ] Gender field captured in registration but not stored in DB
 
@@ -46,32 +65,37 @@ Transform the existing job search and tracking app into an **AI-powered autonomo
 
 ### 0.1 Security Fixes
 
-- [ ] Hash passwords with bcrypt on registration and login
-- [ ] Move all secrets (JWT secret, DB credentials) to `.env`
-- [ ] Proxy RapidAPI calls through the backend — remove API key from client
-- [ ] Add input sanitization and validation middleware (express-validator)
-- [ ] Add rate limiting on auth and API endpoints (express-rate-limit)
-- [ ] Set `secure: true` and `sameSite: strict` on cookies for production
+- [x] Hash passwords with bcrypt on registration and login
+- [x] Move all secrets (JWT secret, DB credentials) to `.env`
+- [x] Proxy RapidAPI calls through the backend — remove API key from client
+- [x] Add input sanitization and validation middleware (express-validator)
+- [x] Add rate limiting on auth and API endpoints (express-rate-limit)
+- [x] Add Helmet.js security headers (HSTS, CSP, X-Frame-Options, etc.)
+- [x] Implement JWT token refresh mechanism (7-day sessions)
+- [x] Clear refresh tokens on logout (session invalidation)
+- [ ] Set `secure: true` and `sameSite: strict` on cookies for production (ready for HTTPS)
 
 ### 0.2 Backend Refactor
 
-- [ ] Split `Api/index.js` into modular structure:
+- [x] Split `Api/index.js` into modular structure:
   ```
   Api/
   ├── routes/
   │   ├── auth.routes.js
-  │   ├── application.routes.js
+  │   ├── tracker.routes.js
   │   ├── jobs.routes.js
+  │   ├── oauth.routes.js
   │   └── agent.routes.js        # New — AI agent endpoints
   ├── controllers/
   │   ├── auth.controller.js
-  │   ├── application.controller.js
+  │   ├── tracker.controller.js
   │   ├── jobs.controller.js
-  │   └── agent.controller.js
+  │   └── agent.controller.js     # New
   ├── services/
   │   ├── auth.service.js
-  │   ├── job.service.js
-  │   └── ai/                    # New — AI service layer
+  │   ├── tracker.service.js
+  │   ├── jobs.service.js
+  │   └── ai/                     # New — AI service layer
   │       ├── coverLetter.service.js
   │       ├── matching.service.js
   │       ├── interviewPrep.service.js
@@ -81,14 +105,18 @@ Transform the existing job search and tracking app into an **AI-powered autonomo
   │           ├── jobAlert.agent.js
   │           └── autoApply.agent.js
   ├── middleware/
-  │   ├── auth.middleware.js
-  │   ├── validate.middleware.js
-  │   └── rateLimit.middleware.js
-  ├── prisma/
-  │   └── schema.prisma
+  │   ├── requireAuth.js
+  │   ├── validate.js
+  │   ├── rateLimiter.js
+  │   └── cors.js
   ├── config/
-  │   └── index.js
-  └── index.js                   # Slim entry point
+  │   ├── env.js
+  │   ├── passport.js
+  │   ├── prisma.js
+  │   └── cors.js
+  ├── utils/
+  │   └── token.js
+  └── index.js                   # Slim entry point (25 lines)
   ```
 
 ### 0.3 Database Schema Additions
