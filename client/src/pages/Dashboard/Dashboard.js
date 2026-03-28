@@ -76,7 +76,7 @@ const Dashboard = () => {
           <div
             className="dashboard-feature-card"
             style={{ backgroundColor: cardBackgroundColors[1] }}
-            onClick={() => navigateTo('/metrics')}
+            onClick={() => navigateTo('/joblist/analytics')}
           >
             <div
               className="dashboard-feature-icon"
@@ -85,9 +85,9 @@ const Dashboard = () => {
               📊
             </div>
             <div className="dashboard-feature-content">
-              <h3 className="feature-title">See your performance metrics</h3>
+              <h3 className="feature-title">See your job search analytics</h3>
               <p className="feature-description">
-                Track your progress and get insights on your job search journey!
+                Get AI-powered insights on your applications and market trends!
               </p>
             </div>
           </div>

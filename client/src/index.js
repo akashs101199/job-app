@@ -15,6 +15,7 @@ import Home from './pages/Home/Home';
 import RequireAuth from './components/auth/RequireAuth';
 import JobSearch from './pages/JobSearch/JobSearch';
 import InterviewPrep from './pages/InterviewPrep/InterviewPrep';
+import Analytics from './pages/Analytics/Analytics';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -34,6 +35,7 @@ root.render(
           <Route path="profile" element={<Profile />} />
           <Route path="jobsearch" element={<JobSearch />} />
           <Route path="interview-prep/:jobId" element={<InterviewPrep />} />
+          <Route path="analytics" element={<Analytics />} />
         </Route>
       </Routes>
     </BrowserRouter>
