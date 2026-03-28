@@ -16,6 +16,8 @@ import RequireAuth from './components/auth/RequireAuth';
 import JobSearch from './pages/JobSearch/JobSearch';
 import InterviewPrep from './pages/InterviewPrep/InterviewPrep';
 import Analytics from './pages/Analytics/Analytics';
+import PerformanceDetails from './pages/Analytics/PerformanceDetails';
+import MarketTrendsDetails from './pages/Analytics/MarketTrendsDetails';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -36,6 +38,8 @@ root.render(
           <Route path="jobsearch" element={<JobSearch />} />
           <Route path="interview-prep/:jobId" element={<InterviewPrep />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="performance-details" element={<PerformanceDetails />} />
+          <Route path="market-trends-details" element={<MarketTrendsDetails />} />
         </Route>
       </Routes>
     </BrowserRouter>

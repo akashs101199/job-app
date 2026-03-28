@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthUser } from '../../context/AuthContext';
 import { getInsightsApi, getMarketTrendsApi } from '../../services/analytics.service';
 import InsightCard from './components/InsightCard';
@@ -10,15 +11,28 @@ import './Analytics.css';
 
 const Analytics = () => {
   const { user } = useAuthUser();
+  const navigate = useNavigate();
   const [insights, setInsights] = useState(null);
   const [marketTrends, setMarketTrends] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(300000); // 5 minutes
 
   useEffect(() => {
     loadAnalytics();
   }, []);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      loadAnalytics();
+    }, refreshInterval);
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, refreshInterval]);
 
   const loadAnalytics = async () => {
     try {
@@ -83,9 +97,35 @@ const Analytics = () => {
             AI-powered insights to optimize your job search strategy
           </p>
         </div>
-        <button className="analytics-refresh-btn" onClick={loadAnalytics}>
-          🔄 Refresh Data
-        </button>
+        <div className="analytics-controls">
+          <div className="auto-refresh-toggle">
+            <label className="toggle-label">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="toggle-input"
+              />
+              <span className="toggle-slider"></span>
+              <span className="toggle-text">Auto-refresh</span>
+            </label>
+            {autoRefresh && (
+              <select
+                className="refresh-interval-select"
+                value={refreshInterval}
+                onChange={(e) => setRefreshInterval(Number(e.target.value))}
+              >
+                <option value={60000}>Every 1 min</option>
+                <option value={300000}>Every 5 min</option>
+                <option value={600000}>Every 10 min</option>
+                <option value={1800000}>Every 30 min</option>
+              </select>
+            )}
+          </div>
+          <button className="analytics-refresh-btn" onClick={loadAnalytics}>
+            🔄 Refresh Now
+          </button>
+        </div>
       </div>
 
       <div className="analytics-tabs">
@@ -100,12 +140,14 @@ const Analytics = () => {
           onClick={() => setActiveTab('performance')}
         >
           🎯 Performance
+          <span className="tab-view-more">→ Details</span>
         </button>
         <button
           className={`analytics-tab ${activeTab === 'market' ? 'active' : ''}`}
           onClick={() => setActiveTab('market')}
         >
           🌍 Market Trends
+          <span className="tab-view-more">→ Details</span>
         </button>
         <button
           className={`analytics-tab ${activeTab === 'actions' ? 'active' : ''}`}
@@ -155,6 +197,14 @@ const Analytics = () => {
                   description={insights.performanceAnalysis}
                   className="analytics-full-width"
                 />
+                <div className="analytics-full-width">
+                  <button
+                    className="view-details-btn"
+                    onClick={() => navigate('/joblist/performance-details')}
+                  >
+                    📊 View Detailed Performance Analysis →
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -164,11 +214,21 @@ const Analytics = () => {
         {activeTab === 'market' && (
           <div className="analytics-grid">
             {marketTrends && (
-              <InsightCard
-                title="🌍 Market Trends"
-                description={marketTrends.trends}
-                className="analytics-full-width"
-              />
+              <>
+                <InsightCard
+                  title="🌍 Market Trends"
+                  description={marketTrends.trends}
+                  className="analytics-full-width"
+                />
+                <div className="analytics-full-width">
+                  <button
+                    className="view-details-btn"
+                    onClick={() => navigate('/joblist/market-trends-details')}
+                  >
+                    🔍 View Detailed Market Analysis →
+                  </button>
+                </div>
+              </>
             )}
           </div>
         )}

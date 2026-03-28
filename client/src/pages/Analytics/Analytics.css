@@ -32,6 +32,84 @@
   margin: 0;
 }
 
+.analytics-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.auto-refresh-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-input {
+  display: none;
+}
+
+.toggle-slider {
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  background-color: #bdc3c7;
+  border-radius: 12px;
+  position: relative;
+  transition: background-color 0.3s ease;
+}
+
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: left 0.3s ease;
+}
+
+.toggle-input:checked + .toggle-slider {
+  background-color: #27ae60;
+}
+
+.toggle-input:checked + .toggle-slider::after {
+  left: 22px;
+}
+
+.toggle-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.refresh-interval-select {
+  padding: 6px 12px;
+  background-color: #ecf0f1;
+  color: #2c3e50;
+  border: 2px solid #bdc3c7;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.refresh-interval-select:hover {
+  border-color: #3498db;
+  background-color: white;
+}
+
 .analytics-refresh-btn {
   padding: 10px 20px;
   background-color: #3498db;
@@ -52,6 +130,33 @@
 }
 
 .analytics-refresh-btn:active {
+  transform: translateY(0);
+}
+
+.view-details-btn {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.view-details-btn:hover {
+  background: linear-gradient(135deg, #2980b9, #1f618d);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(52, 152, 219, 0.4);
+}
+
+.view-details-btn:active {
   transform: translateY(0);
 }
 
@@ -88,6 +193,13 @@
   background-color: white;
   color: #3498db;
   border-bottom-color: #3498db;
+}
+
+.tab-view-more {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-left: 4px;
+  display: inline-block;
 }
 
 /* Content Grid */
