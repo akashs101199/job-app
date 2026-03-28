@@ -479,19 +479,135 @@
   .jl-job-cards {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .jl-filter-group {
     flex-direction: row;
     flex-wrap: wrap;
   }
-  
+
   .jl-filter-group input,
   .jl-filter-group select {
     flex: 1 0 40%;
   }
-  
+
   .jl-search-button,
   .jl-reset-button {
     flex: 1 0 auto;
+  }
+}
+
+/* Match Score Badges */
+.jl-title-with-badge {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.jl-title-with-badge h3 {
+  flex: 1;
+  margin: 0 !important;
+}
+
+.jl-match-badge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.jl-match-great {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.jl-match-good {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.jl-match-fair {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.jl-match-low {
+  background-color: #e2e3e5;
+  color: #383d41;
+  border: 1px solid #d6d8db;
+}
+
+/* Match Score in Detail View */
+.jl-detail-title-with-badge {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 10px;
+}
+
+.jl-match-badge-detail {
+  padding: 15px;
+  border-radius: 6px;
+  min-width: 200px;
+  flex-shrink: 0;
+}
+
+.jl-match-badge-detail p {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.jl-match-breakdown {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.jl-breakdown-label {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 5px 0;
+  opacity: 0.8;
+}
+
+.jl-match-breakdown ul {
+  list-style: none;
+  padding: 0;
+  margin: 5px 0;
+}
+
+.jl-match-breakdown li {
+  font-size: 12px;
+  margin: 3px 0;
+  opacity: 0.9;
+}
+
+/* Responsive adjustments for match badge */
+@media (max-width: 480px) {
+  .jl-title-with-badge {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .jl-match-badge {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  .jl-detail-title-with-badge {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .jl-match-badge-detail {
+    min-width: 100%;
   }
 }

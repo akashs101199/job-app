@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const { generateCoverLetter } = require('../services/ai/coverLetter.service');
 const { logAgentAction } = require('../services/ai/agentLog.service');
+const { calculateMatchScore } = require('../services/ai/matching.service');
 
 const generateCoverLetterHandler = async (req, res) => {
   const { jobId, jobTitle, companyName, jobDescription, jobHighlights } = req.body;
@@ -233,9 +234,58 @@ const generateColdEmailHandler = async (req, res) => {
   }
 };
 
+const calculateMatchScoresHandler = async (req, res) => {
+  const { jobs } = req.body;
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!jobs || !Array.isArray(jobs)) {
+    return res.status(400).json({ error: 'jobs array is required' });
+  }
+
+  try {
+    // Get user profile
+    const user = await prisma.user.findUnique({
+      where: { email: userId },
+      select: { email: true, firstName: true, lastName: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Calculate match scores for each job
+    const jobsWithScores = await Promise.all(
+      jobs.map(async (job) => {
+        const { score, breakdown } = await calculateMatchScore(user, job);
+        return {
+          ...job,
+          matchScore: score,
+          matchBreakdown: breakdown,
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      jobs: jobsWithScores,
+    });
+  } catch (error) {
+    console.error('Match score calculation error:', error);
+    res.status(500).json({
+      error: 'Failed to calculate match scores',
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   generateCoverLetterHandler,
   getCoverLettersHandler,
   getAllCoverLettersHandler,
   generateColdEmailHandler,
+  calculateMatchScoresHandler,
 };

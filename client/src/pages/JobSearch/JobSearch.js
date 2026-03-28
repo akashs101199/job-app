@@ -3,6 +3,7 @@ import './JobSearch.css';
 import { useAuthUser } from '../../context/AuthContext';
 import { searchJobs as searchJobsApi } from '../../services/jobs.service';
 import { generateCoverLetterApi } from '../../services/coverLetter.service';
+import { calculateMatchScoresApi, sortJobs, getMatchLevel } from '../../services/matching.service';
 import CoverLetterModal from '../../components/shared/CoverLetterModal';
 
 const JobSearch = () => {
@@ -15,8 +16,10 @@ const JobSearch = () => {
     const [filters, setFilters] = useState({
         title: '',
         location: '',
-        platform: 'LinkedIn'
+        platform: 'LinkedIn',
+        sortBy: 'match-score'
     });
+    const [matchScoresCalculating, setMatchScoresCalculating] = useState(false);
     const [searchExecuted, setSearchExecuted] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [jobCache, setJobCache] = useState({});
@@ -86,9 +89,36 @@ const JobSearch = () => {
             const data = await response.json();
 
             if (data && data.status === 'OK' && Array.isArray(data.data)) {
-                setJobs(data.data);
+                // Calculate match scores for jobs
+                setMatchScoresCalculating(true);
+                try {
+                    const matchResponse = await calculateMatchScoresApi(data.data);
+                    if (matchResponse.ok) {
+                        const matchData = await matchResponse.json();
+                        if (matchData.success && Array.isArray(matchData.jobs)) {
+                            // Sort by selected criteria
+                            const sortedJobs = sortJobs(matchData.jobs, filters.sortBy);
+                            setJobs(sortedJobs);
+                            setJobCache(prevCache => ({ ...prevCache, [cacheKey]: sortedJobs }));
+                        } else {
+                            // Fallback if match scores fail
+                            setJobs(data.data);
+                            setJobCache(prevCache => ({ ...prevCache, [cacheKey]: data.data }));
+                        }
+                    } else {
+                        // Fallback if match scores fail
+                        setJobs(data.data);
+                        setJobCache(prevCache => ({ ...prevCache, [cacheKey]: data.data }));
+                    }
+                } catch (matchError) {
+                    console.warn('Failed to calculate match scores:', matchError);
+                    // Fallback if match scores fail
+                    setJobs(data.data);
+                    setJobCache(prevCache => ({ ...prevCache, [cacheKey]: data.data }));
+                } finally {
+                    setMatchScoresCalculating(false);
+                }
                 setCurrentPage(pageNumber);
-                setJobCache(prevCache => ({ ...prevCache, [cacheKey]: data.data }));
             } else {
                 setJobs([]);
                 setJobCache(prevCache => ({ ...prevCache, [cacheKey]: [] }));
@@ -115,7 +145,7 @@ const JobSearch = () => {
     };
 
     const handleReset = () => {
-        setFilters({ title: '', location: '', platform: 'LinkedIn' });
+        setFilters({ title: '', location: '', platform: 'LinkedIn', sortBy: 'match-score' });
         setSearchExecuted(false);
         setSelectedJob(null);
         setJobCache({});
@@ -125,6 +155,14 @@ const JobSearch = () => {
     useEffect(() => {
         fetchJobs(1, filters.title, filters.location);
     }, []);
+
+    // Handle sorting when sortBy changes
+    useEffect(() => {
+        if (jobs.length > 0 && filters.sortBy) {
+            const sortedJobs = sortJobs(jobs, filters.sortBy);
+            setJobs(sortedJobs);
+        }
+    }, [filters.sortBy]);
 
     const handleNextPage = () => {
         if (!loading) fetchJobs(currentPage + 1, filters.title, filters.location);
@@ -244,6 +282,11 @@ const JobSearch = () => {
                                 <option key={platform.value} value={platform.value}>{platform.label}</option>
                             ))}
                         </select>
+                        <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange} disabled={loading || matchScoresCalculating}>
+                            <option value="match-score">Best Match</option>
+                            <option value="date">Most Recent</option>
+                            <option value="relevance">Relevance</option>
+                        </select>
                         <button type="submit" className="jl-search-button" disabled={loading}>{loading && currentPage === 1 && searchExecuted ? 'Searching...' : 'Search Jobs'}</button>
                         <button type="button" className="jl-reset-button" onClick={handleReset} disabled={loading}>Reset</button>
                     </div>
@@ -260,7 +303,28 @@ const JobSearch = () => {
                             <button className="jl-back-button" onClick={() => setSelectedJob(null)}>&larr; Back to listings (Page {currentPage})</button>
                             <div className="jl-job-detail-card">
                                 <div className="jl-job-header">
-                                    <h2>{selectedJob.job_title}</h2>
+                                    <div className="jl-detail-title-with-badge">
+                                        <div>
+                                            <h2>{selectedJob.job_title}</h2>
+                                            {selectedJob.matchScore !== undefined && (
+                                                <div className={`jl-match-badge-detail jl-match-${getMatchLevel(selectedJob.matchScore)}`}>
+                                                    <p>{selectedJob.matchScore}% Match</p>
+                                                    {selectedJob.matchBreakdown && (
+                                                        <div className="jl-match-breakdown">
+                                                            <p className="jl-breakdown-label">Match Breakdown:</p>
+                                                            <ul>
+                                                                <li>Job Title: {selectedJob.matchBreakdown.jobTitle || 0}/40</li>
+                                                                <li>Company: {selectedJob.matchBreakdown.company || 0}/20</li>
+                                                                <li>Employment Type: {selectedJob.matchBreakdown.employmentType || 0}/15</li>
+                                                                <li>Remote Preference: {selectedJob.matchBreakdown.remotePreference || 0}/15</li>
+                                                                <li>Platform Success: {selectedJob.matchBreakdown.platformSuccess || 0}/10</li>
+                                                            </ul>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                     <h3>{selectedJob.employer_name}</h3>
                                     <p className="jl-location">{selectedJob.job_city}{selectedJob.job_state ? `, ${selectedJob.job_state}` : ''} {selectedJob.job_country}</p>
                                     {selectedJob.job_is_remote && <p className="jl-remote-tag">Remote</p>}
@@ -326,7 +390,14 @@ const JobSearch = () => {
                                 {filteredJobs.length > 0 ? filteredJobs.map(job => (
                                     <div key={job.job_id} className="jl-job-card" onClick={() => setSelectedJob(job)}>
                                         <div className="jl-job-card-header">
-                                            <h3>{job.job_title}</h3>
+                                            <div className="jl-title-with-badge">
+                                                <h3>{job.job_title}</h3>
+                                                {job.matchScore !== undefined && (
+                                                    <span className={`jl-match-badge jl-match-${getMatchLevel(job.matchScore)}`}>
+                                                        {job.matchScore}% Match
+                                                    </span>
+                                                )}
+                                            </div>
                                             <h4>{job.employer_name}</h4>
                                             <p className="jl-location">{job.job_city}{job.job_state ? `, ${job.job_state}` : ''} {job.job_country}{job.job_is_remote && <span className="jl-remote-tag-list"> (Remote Available)</span>}</p>
                                         </div>
