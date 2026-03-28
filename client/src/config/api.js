@@ -17,6 +17,7 @@ const ENDPOINTS = {
   AGENT_GET_ALL_COVER_LETTERS: `${API_BASE_URL}/agent/cover-letters`,
   AGENT_GENERATE_COLD_EMAIL: `${API_BASE_URL}/agent/cold-email`,
   AGENT_MATCH_JOBS: `${API_BASE_URL}/agent/match-jobs`,
+  AGENT_INTERVIEW_PREP: `${API_BASE_URL}/agent/interview-prep`,
 };
 
 export { API_BASE_URL, ENDPOINTS };

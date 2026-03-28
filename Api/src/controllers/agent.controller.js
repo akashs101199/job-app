@@ -2,6 +2,7 @@ const prisma = require('../config/prisma');
 const { generateCoverLetter } = require('../services/ai/coverLetter.service');
 const { logAgentAction } = require('../services/ai/agentLog.service');
 const { calculateMatchScore } = require('../services/ai/matching.service');
+const { generateInterviewPrep } = require('../services/ai/interviewPrep.service');
 
 const generateCoverLetterHandler = async (req, res) => {
   const { jobId, jobTitle, companyName, jobDescription, jobHighlights } = req.body;
@@ -282,10 +283,145 @@ const calculateMatchScoresHandler = async (req, res) => {
   }
 };
 
+const generateInterviewPrepHandler = async (req, res) => {
+  const { jobId, jobTitle, companyName, jobDescription, jobHighlights } = req.body;
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // Validate required fields
+  if (!jobTitle || !companyName) {
+    return res.status(400).json({ error: 'jobTitle and companyName are required' });
+  }
+
+  try {
+    // Get user profile for context
+    const user = await prisma.user.findUnique({
+      where: { email: userId },
+      select: { firstName: true, lastName: true, email: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Generate interview prep using Claude API
+    const result = await generateInterviewPrep(user, {
+      jobId,
+      jobTitle,
+      companyName,
+      jobDescription,
+      jobHighlights,
+    });
+
+    // Save generated content to database
+    const generatedContent = await prisma.generatedContent.create({
+      data: {
+        userId,
+        contentType: 'interview_prep',
+        jobId,
+        jobTitle,
+        companyName,
+        content: JSON.stringify(result),
+        metadata: {
+          components: ['company', 'technical_questions', 'behavioral_questions', 'counter_questions', 'negotiation'],
+          generationTimeMs: result.metadata.generationTimeMs,
+        },
+      },
+    });
+
+    // Log the action
+    await logAgentAction(
+      userId,
+      'interview_prep',
+      'generation',
+      {
+        jobId,
+        jobTitle,
+        companyName,
+      },
+      {
+        contentId: generatedContent.id,
+        generationTimeMs: result.metadata.generationTimeMs,
+      },
+      'success'
+    );
+
+    res.json({
+      success: true,
+      contentId: generatedContent.id,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Interview prep generation error:', error);
+
+    // Log the failed action
+    await logAgentAction(
+      userId,
+      'interview_prep',
+      'generation',
+      { jobId, jobTitle, companyName },
+      null,
+      'failed',
+      error.message
+    ).catch(err => console.error('Error logging failed action:', err));
+
+    res.status(500).json({
+      error: 'Failed to generate interview prep',
+      message: error.message,
+    });
+  }
+};
+
+const getInterviewPrepHandler = async (req, res) => {
+  const { jobId } = req.params;
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const prepContent = await prisma.generatedContent.findFirst({
+      where: {
+        userId,
+        contentType: 'interview_prep',
+        jobId,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!prepContent) {
+      return res.status(404).json({ error: 'Interview prep not found' });
+    }
+
+    // Parse the JSON content
+    let data;
+    try {
+      data = JSON.parse(prepContent.content);
+    } catch (e) {
+      data = prepContent.content;
+    }
+
+    res.json({
+      success: true,
+      contentId: prepContent.id,
+      data,
+    });
+  } catch (error) {
+    console.error('Error retrieving interview prep:', error);
+    res.status(500).json({ error: 'Failed to retrieve interview prep' });
+  }
+};
+
 module.exports = {
   generateCoverLetterHandler,
   getCoverLettersHandler,
   getAllCoverLettersHandler,
   generateColdEmailHandler,
   calculateMatchScoresHandler,
+  generateInterviewPrepHandler,
+  getInterviewPrepHandler,
 };

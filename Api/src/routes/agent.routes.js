@@ -9,5 +9,7 @@ router.get('/cover-letters/:jobId', requireAuth, agentController.getCoverLetters
 router.get('/cover-letters', requireAuth, agentController.getAllCoverLettersHandler);
 router.post('/cold-email', requireAuth, agentController.generateColdEmailHandler);
 router.post('/match-jobs', requireAuth, agentController.calculateMatchScoresHandler);
+router.post('/interview-prep', requireAuth, agentController.generateInterviewPrepHandler);
+router.get('/interview-prep/:jobId', requireAuth, agentController.getInterviewPrepHandler);
 
 module.exports = router;
