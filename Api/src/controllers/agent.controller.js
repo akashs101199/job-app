@@ -3,6 +3,7 @@ const { generateCoverLetter } = require('../services/ai/coverLetter.service');
 const { logAgentAction } = require('../services/ai/agentLog.service');
 const { calculateMatchScore } = require('../services/ai/matching.service');
 const { generateInterviewPrep } = require('../services/ai/interviewPrep.service');
+const { generateUserInsights, generateMarketTrends } = require('../services/ai/analytics.service');
 
 const generateCoverLetterHandler = async (req, res) => {
   const { jobId, jobTitle, companyName, jobDescription, jobHighlights } = req.body;
@@ -416,6 +417,126 @@ const getInterviewPrepHandler = async (req, res) => {
   }
 };
 
+const getInsightsHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // Get user profile for context
+    const user = await prisma.user.findUnique({
+      where: { email: userId },
+      select: { firstName: true, lastName: true, email: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Generate insights
+    const result = await generateUserInsights(user);
+
+    // Log the action
+    await logAgentAction(
+      userId,
+      'analytics',
+      'insights_generation',
+      {},
+      { generationTimeMs: result.metadata.generationTimeMs },
+      'success'
+    );
+
+    res.json({
+      success: true,
+      data: {
+        insights: result.insights,
+        skillGaps: result.skillGaps,
+        performanceAnalysis: result.performanceAnalysis,
+        recommendations: result.recommendations,
+        generatedAt: result.metadata.generatedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Insights generation error:', error);
+
+    // Log the failed action
+    await logAgentAction(userId, 'analytics', 'insights_generation', {}, null, 'failed', error.message).catch(
+      err => console.error('Error logging failed action:', err)
+    );
+
+    res.status(500).json({
+      error: 'Failed to generate insights',
+      message: error.message,
+    });
+  }
+};
+
+const getMarketTrendsHandler = async (req, res) => {
+  const { jobListings = [] } = req.body || {};
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // Get user profile to determine target roles
+    const user = await prisma.user.findUnique({
+      where: { email: userId },
+      select: { firstName: true, lastName: true, email: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get user's target roles from application history
+    const applicationHistory = await prisma.application.findMany({
+      where: { userId },
+      select: { jobName: true },
+      distinct: ['jobName'],
+      take: 10,
+    });
+
+    const targetRoles = applicationHistory.map(app => app.jobName).filter(Boolean);
+
+    // Generate market trends
+    const result = await generateMarketTrends(jobListings, targetRoles);
+
+    // Log the action
+    await logAgentAction(
+      userId,
+      'analytics',
+      'market_trends',
+      { jobListingsCount: jobListings.length },
+      { generationTimeMs: result.metadata.generationTimeMs },
+      'success'
+    );
+
+    res.json({
+      success: true,
+      data: {
+        trends: result.trends,
+        generatedAt: result.metadata.generatedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Market trends error:', error);
+
+    // Log the failed action
+    await logAgentAction(userId, 'analytics', 'market_trends', {}, null, 'failed', error.message).catch(
+      err => console.error('Error logging failed action:', err)
+    );
+
+    res.status(500).json({
+      error: 'Failed to generate market trends',
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   generateCoverLetterHandler,
   getCoverLettersHandler,
@@ -424,4 +545,6 @@ module.exports = {
   calculateMatchScoresHandler,
   generateInterviewPrepHandler,
   getInterviewPrepHandler,
+  getInsightsHandler,
+  getMarketTrendsHandler,
 };

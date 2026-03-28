@@ -11,5 +11,7 @@ router.post('/cold-email', requireAuth, agentController.generateColdEmailHandler
 router.post('/match-jobs', requireAuth, agentController.calculateMatchScoresHandler);
 router.post('/interview-prep', requireAuth, agentController.generateInterviewPrepHandler);
 router.get('/interview-prep/:jobId', requireAuth, agentController.getInterviewPrepHandler);
+router.get('/insights', requireAuth, agentController.getInsightsHandler);
+router.post('/market-trends', requireAuth, agentController.getMarketTrendsHandler);
 
 module.exports = router;
