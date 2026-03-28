@@ -2,20 +2,23 @@ import Dropdown from 'react-bootstrap/Dropdown';
 import neu from '../../assets/images/northeastern.jpg';
 import { useAuthUser } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useEffect } from 'react-router-dom';
 
 const TopNav = () => {
     const navigate = useNavigate();
-    const { logout, user } = useAuthUser();
+    const { logout, user, isAuthenticated } = useAuthUser();
+
+    // Redirect to login when logout completes
+    useEffect(() => {
+        if (!isAuthenticated) {
+            navigate('/login');
+        }
+    }, [isAuthenticated, navigate]);
+
     const handleLogout = async () => {
         await logout();
-        navigate('/login');
-        window.localStorage.removeItem('user');
-        window.dispatchEvent(new Event('storage'));
     };
-    const gotoProfile = async () => {
-        navigate('/joblist/profile');
-    };
+
     const gotoHomeJob = async () => {
         navigate('/joblist');
     };

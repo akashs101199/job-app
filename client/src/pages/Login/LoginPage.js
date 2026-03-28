@@ -94,6 +94,18 @@ function LoginPage() {
             </button>
           </form>
 
+          <div style={{ textAlign: 'center', margin: '20px 0' }}>
+            <p style={{ color: '#666', marginBottom: '15px' }}>Or</p>
+            <a
+              href="http://localhost:5000/api/auth/google"
+              className="btn"
+              id="btn-signup"
+              style={{ backgroundColor: '#4285F4', borderColor: '#4285F4' }}
+            >
+              Login with Google
+            </a>
+          </div>
+
           <div className="nav-links">
             <p>New user?
               <Link to="/register">

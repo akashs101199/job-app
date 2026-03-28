@@ -1,17 +1,8 @@
-const { generateToken, verifyToken } = require('../utils/token');
+const { generateToken } = require('../utils/token');
 const authService = require('../services/auth.service');
 
 const register = async (req, res) => {
   const { email, password, firstName, lastName, dob } = req.body;
-
-  if (!email || !password || !firstName || !lastName || !dob) {
-    return res.status(400).json({ message: 'All fields are required.' });
-  }
-
-  const parsedDate = new Date(dob);
-  if (isNaN(parsedDate.getTime())) {
-    return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD.' });
-  }
 
   try {
     const existing = await authService.findUserByEmail(email);
@@ -29,23 +20,6 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required.' });
-  }
-
-  // Block login if another user is already logged in
-  const existingToken = req.cookies.token;
-  if (existingToken) {
-    try {
-      const decoded = verifyToken(existingToken);
-      if (decoded.email !== email) {
-        return res.status(403).json({ message: 'Another user is already logged in. Please logout first.' });
-      }
-    } catch (err) {
-      // Token invalid/expired — allow new login
-    }
-  }
 
   try {
     const user = await authService.findUserByEmail(email);
