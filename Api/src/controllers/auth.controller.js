@@ -61,7 +61,17 @@ const login = async (req, res) => {
   }
 };
 
-const logout = (_req, res) => {
+const logout = async (req, res) => {
+  try {
+    // Invalidate refresh token in database if user is authenticated
+    if (req.user?.email) {
+      await authService.clearRefreshToken(req.user.email);
+    }
+  } catch (error) {
+    console.error('Error clearing refresh token:', error);
+  }
+
+  // Clear cookies
   res.clearCookie('token');
   res.clearCookie('refreshToken');
   return res.status(200).json({ message: 'Logged out successfully' });
