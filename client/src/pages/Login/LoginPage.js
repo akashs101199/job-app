@@ -1,33 +1,37 @@
-import './App.css';
-import neu from './images/northeastern.jpg';
-import React, { useState } from 'react';
-import { useAuthUser } from "./AuthContext";
+import '../../styles/App.css';
+import neu from '../../assets/images/northeastern.jpg';
+import React, { useState, useEffect } from 'react';
+import { useAuthUser } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import jobImage from './images/login_image.jpeg';
+import jobImage from '../../assets/images/login_image.jpeg';
 import { Link } from 'react-router-dom';
-import 'bootstrap/dist/css/bootstrap.min.css';
 
-
-function App() {
+function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
+  const [error, setError] = useState('');
+
   const { login, error_call, isAuthenticated } = useAuthUser();
   const navigate = useNavigate();
 
-  if(isAuthenticated) {
-    navigate('/joblist');
-  }
-  
+  // Fix: navigate in useEffect instead of during render
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/joblist');
+    }
+  }, [isAuthenticated, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       setError('Both email and password are required!');
       return;
     }
-    await login(email, password);
-    navigate('/joblist');
+    const result = await login(email, password);
+    if (result.success) {
+      navigate('/joblist');
+    }
   };
 
   return (
@@ -45,53 +49,53 @@ function App() {
           </div>
         </div>
       </div>
-      
+
       <div id="signup" style={{backgroundImage: `url(${jobImage})`}}>
         <div id="signup_in">
           <h2 className="cac">Log in</h2>
-          
-          {error_call && 
+
+          {(error_call || error) &&
             <div className="error-message">
-              {error_call}
+              {error_call || error}
             </div>
           }
-          
+
           <form onSubmit={handleSubmit}>
-            <input 
-              type="text" 
-              className="form-control" 
-              id="username" 
-              name="username" 
-              placeholder="Username" 
+            <input
+              type="text"
+              className="form-control"
+              id="username"
+              name="username"
+              placeholder="Username"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            
-            <input 
-              type="password" 
-              className="form-control" 
-              id="password" 
-              name="password" 
-              placeholder="Password" 
+
+            <input
+              type="password"
+              className="form-control"
+              id="password"
+              name="password"
+              placeholder="Password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            
+
             <br />
-            
-            <button 
-              type="submit" 
-              className="btn" 
+
+            <button
+              type="submit"
+              className="btn"
               id="btn-signup"
             >
               Log in
             </button>
           </form>
-          
+
           <div className="nav-links">
-            <p>New user? 
+            <p>New user?
               <Link to="/register">
                 Sign Up here
               </Link>
@@ -103,4 +107,4 @@ function App() {
   );
 }
 
-export default App;
+export default LoginPage;

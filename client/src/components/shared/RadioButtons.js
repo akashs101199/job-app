@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
-import './App.css';
+import '../../styles/App.css';
+
 const RadioButtons = () => {
-  // State to hold the selected radio button value
   const [selectedOption, setSelectedOption] = useState('');
 
-  // Handle change when a radio button is clicked
   const handleChange = (event) => {
     setSelectedOption(event.target.value);
   };
 
   return (
-    <div class = "user-type">
-   
-       <label> Gender:
-     
-        <label class = "labelG">
+    <div className="user-type">
+      <label> Gender:
+        <label className="labelG">
           <input
             type="radio"
             name="gender"
@@ -24,10 +21,8 @@ const RadioButtons = () => {
           />
           Male
         </label>
-     
 
-      
-        <label class = "labelG">
+        <label className="labelG">
           <input
             type="radio"
             name="gender"
@@ -37,13 +32,7 @@ const RadioButtons = () => {
           />
           Female
         </label>
-        </label>
-
-      
-      
-      
-
-     
+      </label>
     </div>
   );
 };

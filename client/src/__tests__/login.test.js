@@ -1,31 +1,24 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import Login from "../Login"; // Login component
-import { useAuthUser } from "../AuthContext"; // Correct import path for AuthContext
+import RegisterPage from "../pages/Register/RegisterPage";
+import { useAuthUser } from "../context/AuthContext";
 
-// Mock the AuthContext (no need to mock react-router-dom, it's already mocked)
-jest.mock("../AuthContext", () => ({
+jest.mock("../context/AuthContext", () => ({
   useAuthUser: jest.fn(),
 }));
 
-
-// We're using the manual mock for react-router-dom that we created in src/__mocks__
-// No need to mock it here again
-
-describe("Login Component", () => {
+describe("RegisterPage Component", () => {
   const mockRegister = jest.fn();
   const mockNavigate = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
     useAuthUser.mockReturnValue({ register: mockRegister });
-    
-    // Import the mock directly from the mocked module
+
     const reactRouterDom = require("react-router-dom");
     reactRouterDom.useNavigate.mockReturnValue(mockNavigate);
   });
 
-  // Helper function to fill out the form
   const fillForm = ({
     firstName = "",
     lastName = "",
@@ -58,25 +51,22 @@ describe("Login Component", () => {
   test("shows error if fields are empty", async () => {
     render(
       <MemoryRouter>
-        <Login />
+        <RegisterPage />
       </MemoryRouter>
     );
 
-    // Simulate clicking the "Sign Up" button
     fireEvent.click(screen.getByText("Sign Up"));
 
-    // Wait for the error message to appear
     expect(await screen.findByText("Fill in all fields!")).toBeInTheDocument();
   });
 
   test("calls register function on form submit", async () => {
     render(
       <MemoryRouter>
-        <Login />
+        <RegisterPage />
       </MemoryRouter>
     );
 
-    // Fill in the form fields with valid data
     fillForm({
       firstName: "John",
       lastName: "Doe",
@@ -85,13 +75,10 @@ describe("Login Component", () => {
       dob: "1990-01-01",
     });
 
-    // Simulate clicking the "Sign Up" button
     fireEvent.click(screen.getByText("Sign Up"));
 
-    // Wait for the form submission
     await waitFor(() => expect(mockRegister).toHaveBeenCalledTimes(1));
 
-    // Check if navigation was called after registration
-    expect(mockNavigate).toHaveBeenCalledWith("/welcome"); // Adjust as per your route
+    expect(mockNavigate).toHaveBeenCalledWith("/login");
   });
 });

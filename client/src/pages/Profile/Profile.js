@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthUser } from "./AuthContext";
-import "bootstrap/dist/css/bootstrap.min.css";
+import { useAuthUser } from '../../context/AuthContext';
 
 const profileStyles = {
   container: {
@@ -43,9 +41,6 @@ const profileStyles = {
     borderBottom: '1px solid #eee',
     transition: 'background-color 0.2s',
   },
-  tableRowHover: {
-    backgroundColor: '#f9f9f9',
-  },
   tableCell: {
     padding: '12px 15px',
     fontSize: '0.9rem',
@@ -69,17 +64,11 @@ const profileStyles = {
     transition: 'background-color 0.2s',
     fontSize: '0.85rem',
   },
-  updateButtonHover: {
-    backgroundColor: '#2980b9',
-  },
   jobLink: {
     color: '#3498db',
     textDecoration: 'none',
     fontWeight: '500',
     cursor: 'pointer',
-  },
-  jobLinkHover: {
-    textDecoration: 'underline',
   },
   statusBadge: {
     padding: '5px 10px',
@@ -88,7 +77,6 @@ const profileStyles = {
     display: 'inline-block',
     fontSize: '0.85rem',
   },
-  // Status specific styles
   statusApplied: {
     backgroundColor: 'rgba(52, 152, 219, 0.2)',
     color: '#2980b9',
@@ -111,127 +99,83 @@ const profileStyles = {
     color: '#7f8c8d',
     fontStyle: 'italic',
   },
-  statsContainer: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: '20px',
-    flexWrap: 'wrap',
-  },
-  statCard: {
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-    padding: '15px',
-    textAlign: 'center',
-    flex: '1 1 150px',
-    margin: '0 10px 10px 0',
-  },
-  statNumber: {
-    fontSize: '1.5rem',
-    fontWeight: 'bold',
-    marginBottom: '5px',
-  },
-  statLabel: {
-    color: '#7f8c8d',
-    fontSize: '0.9rem',
-  }
 };
 
 const getResponsiveStyles = () => {
   const width = window.innerWidth;
-  
-  if (width < 576) { // Mobile
+
+  if (width < 576) {
     return {
-      table: {
-        fontSize: '0.8rem',
-      },
-      tableCell: {
-        padding: '8px 10px',
-      },
-      header: {
-        fontSize: '1.5rem',
-        textAlign: 'center',
-      },
-      subheader: {
-        fontSize: '1rem',
-        textAlign: 'center',
-      }
+      table: { fontSize: '0.8rem' },
+      tableCell: { padding: '8px 10px' },
+      header: { fontSize: '1.5rem', textAlign: 'center' },
+      subheader: { fontSize: '1rem', textAlign: 'center' },
     };
-  } else if (width < 768) { // Tablet
+  } else if (width < 768) {
     return {
-      tableCell: {
-        padding: '10px 12px',
-      },
-      header: {
-        fontSize: '1.6rem',
-      }
+      tableCell: { padding: '10px 12px' },
+      header: { fontSize: '1.6rem' },
     };
   }
-  
-  return {}; // Default (desktop)
+
+  return {};
 };
 
 const Profile = () => {
-  const { user, fetchRecords, records, updateRecord,getFinishedJobs,finishedJobs } = useAuthUser();
+  const { user, fetchRecords, records, updateRecord, getFinishedJobs, finishedJobs } = useAuthUser();
   const [statusMap, setStatusMap] = useState({});
   const [responsiveStyles, setResponsiveStyles] = useState(getResponsiveStyles());
-  const [localFinishedJobs, setFinishedJobs] = useState(new Set());
+  const [localFinishedJobs, setLocalFinishedJobs] = useState(new Set());
+
+  // Fix: removed alert, fixed undefined setAppliedJobs → setLocalFinishedJobs
+  useEffect(() => {
+    getFinishedJobs();
+  }, []);
 
   useEffect(() => {
-    const fetchFinishedJobs = async () => {
-      getFinishedJobs();
-      
-        alert("Finished Jobs there");
-        finishedJobs.forEach(id=> {
-          setAppliedJobs(prev => new Set(prev).add(id));
-        })
-        
-      
-    };
-    fetchFinishedJobs();
-  }, [user]);  
-  
+    if (finishedJobs) {
+      setLocalFinishedJobs(new Set(finishedJobs));
+    }
+  }, [finishedJobs]);
 
   useEffect(() => {
     if (user && user.email) {
-      fetchRecords(user.email);
+      fetchRecords();
     }
-  
+
     const handleResize = () => {
       setResponsiveStyles(getResponsiveStyles());
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [user, fetchRecords]);
+  }, [user]);
 
   const handleStatusChange = (id, newStatus) => {
     setStatusMap(prev => ({ ...prev, [id]: newStatus }));
   };
-  
+
   const gotoWebsite = (link) => {
     window.open(link, '_blank');
-  }
+  };
 
+  // Fix: removed alert() calls, fixed == to ===
   const handleUpdateClick = async (id, platformName) => {
     try {
       const newStatus = statusMap[id] || 'Interview Scheduled';
-      alert(newStatus);
-      if(newStatus == 'Selected' || newStatus == 'Rejected') {
-        alert(localFinishedJobs)
-        setFinishedJobs(prev => new Set(prev).add(id));
+      if (newStatus === 'Selected' || newStatus === 'Rejected') {
+        setLocalFinishedJobs(prev => new Set(prev).add(id));
       }
-      
-      await updateRecord(user.email, newStatus, id, platformName);
-      await fetchRecords(user.email);  
+
+      await updateRecord(newStatus, id, platformName);
+      await fetchRecords();
     } catch (error) {
       console.error('Error updating status or fetching records:', error);
     }
   };
 
-  // Function to format date (remove time part)
   const formatDate = (dateString) => {
-    if (!dateString) return "";
+    if (!dateString) return '';
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString();
@@ -240,9 +184,8 @@ const Profile = () => {
     }
   };
 
-  // Function to get status badge style
   const getStatusStyle = (status) => {
-    switch(status) {
+    switch (status) {
       case 'Applied':
         return { ...profileStyles.statusBadge, ...profileStyles.statusApplied };
       case 'Interview Scheduled':
@@ -256,34 +199,9 @@ const Profile = () => {
     }
   };
 
-  // Count applications by status
-  const getStatusCounts = () => {
-    const counts = {
-      total: records?.length || 0,
-      applied: 0,
-      interview: 0,
-      selected: 0,
-      rejected: 0
-    };
-    
-    if (records && records.length > 0) {
-      records.forEach(record => {
-        if (record.status === 'Applied') counts.applied++;
-        else if (record.status === 'Interview Scheduled') counts.interview++;
-        else if (record.status === 'Selected') counts.selected++;
-        else if (record.status === 'Rejected') counts.rejected++;
-      });
-    }
-    
-    return counts;
-  };
-
   const isJobFinished = (jobId) => {
-    console.log("Job Id",localFinishedJobs.has(jobId));
     return localFinishedJobs.has(jobId);
-};
-
-  const statusCounts = getStatusCounts();
+  };
 
   return (
     <div style={profileStyles.container} className="profile-job-tracker">
@@ -293,8 +211,7 @@ const Profile = () => {
       <p style={profileStyles.subheader} className="profile-subheader">
         Keep an eye on your progress and update your application statuses as you go
       </p>
-      
-      
+
       <table style={profileStyles.table} className="profile-job-table">
         <thead>
           <tr>
@@ -308,8 +225,8 @@ const Profile = () => {
         <tbody>
           {records && records.length > 0 ? (
             records.map((record, index) => (
-              <tr 
-                key={index} 
+              <tr
+                key={index}
                 style={profileStyles.tableRow}
                 className="profile-table-row"
               >
@@ -325,8 +242,8 @@ const Profile = () => {
                 </td>
                 <td style={profileStyles.tableCell} className="profile-table-cell">{record.companyName}</td>
                 <td style={profileStyles.tableCell} className="profile-table-cell">
-                  <a 
-                    onClick={() => gotoWebsite(record.jobLink)} 
+                  <a
+                    onClick={() => gotoWebsite(record.jobLink)}
                     style={profileStyles.jobLink}
                     className="profile-job-link"
                   >
@@ -348,7 +265,7 @@ const Profile = () => {
                   </select>
                 </td>
                 <td style={profileStyles.tableCell} className="profile-table-cell">
-                  <button 
+                  <button
                     style={profileStyles.updateButton}
                     className="profile-update-button"
                     onClick={() => handleUpdateClick(record.jobListingId, record.platformName)}

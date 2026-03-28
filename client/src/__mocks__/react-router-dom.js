@@ -2,7 +2,7 @@ const mockUseNavigate = jest.fn();
 
 module.exports = {
   MemoryRouter: ({ children }) => children,
-  useNavigate: () => mockUseNavigate,
+  useNavigate: jest.fn(() => mockUseNavigate),
   useLocation: () => ({ pathname: "/" }),
   useParams: () => ({}),
   Link: ({ children }) => children,
