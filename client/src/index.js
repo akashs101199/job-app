@@ -18,6 +18,7 @@ import InterviewPrep from './pages/InterviewPrep/InterviewPrep';
 import Analytics from './pages/Analytics/Analytics';
 import PerformanceDetails from './pages/Analytics/PerformanceDetails';
 import MarketTrendsDetails from './pages/Analytics/MarketTrendsDetails';
+import FollowUpQueue from './pages/FollowUpQueue/FollowUpQueue';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -40,6 +41,7 @@ root.render(
           <Route path="analytics" element={<Analytics />} />
           <Route path="performance-details" element={<PerformanceDetails />} />
           <Route path="market-trends-details" element={<MarketTrendsDetails />} />
+          <Route path="follow-ups" element={<FollowUpQueue />} />
         </Route>
       </Routes>
     </BrowserRouter>
