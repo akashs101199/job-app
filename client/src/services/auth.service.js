@@ -16,5 +16,8 @@ export const register = (email, password, firstName, lastName, dob) =>
     body: JSON.stringify({ email, password, firstName, lastName, dob }),
   });
 
+export const refresh = () =>
+  baseFetch(ENDPOINTS.REFRESH, { method: 'POST' });
+
 export const logout = () =>
   baseFetch(ENDPOINTS.LOGOUT, { method: 'POST' });

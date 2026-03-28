@@ -5,6 +5,7 @@ const ENDPOINTS = {
   LOGIN: `${API_BASE_URL}/login`,
   REGISTER: `${API_BASE_URL}/register`,
   LOGOUT: `${API_BASE_URL}/logout`,
+  REFRESH: `${API_BASE_URL}/refresh`,
   APPLICATION: `${API_BASE_URL}/application`,
   GET_RECORDS: `${API_BASE_URL}/getRecords`,
   UPDATE_RECORD: `${API_BASE_URL}/updateRecord`,

@@ -15,6 +15,7 @@ model User {
   firstName          String
   lastName           String
   dateOfBirth        DateTime
+  refreshToken       String?              @db.LongText
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 

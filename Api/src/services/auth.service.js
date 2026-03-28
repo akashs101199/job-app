@@ -88,6 +88,12 @@ const findOrCreateGoogleUser = async (profile) => {
   });
 };
 
+const updateRefreshToken = async (email, refreshToken) =>
+  prisma.user.update({
+    where: { email },
+    data: { refreshToken },
+  });
+
 module.exports = {
   findUserByEmail,
   findUserProfile,
@@ -95,4 +101,5 @@ module.exports = {
   comparePassword,
   migratePasswordIfNeeded,
   findOrCreateGoogleUser,
+  updateRefreshToken,
 };

@@ -18,6 +18,13 @@ export function AuthProvider({ children }) {
     const fetchUserData = async () => {
       setErrorCall('');
       try {
+        // Try to refresh token first to extend session
+        try {
+          await authApi.refresh();
+        } catch (error) {
+          // Refresh failed, but continue to try fetching user
+        }
+
         const res = await authApi.fetchMe();
         if (res.ok) {
           setIsAuthenticated(true);
@@ -34,7 +41,20 @@ export function AuthProvider({ children }) {
       }
     };
     fetchUserData();
-  }, []);
+
+    // Set up periodic token refresh (every 50 minutes)
+    const refreshInterval = setInterval(async () => {
+      if (isAuthenticated) {
+        try {
+          await authApi.refresh();
+        } catch (error) {
+          console.error('Auto-refresh failed:', error);
+        }
+      }
+    }, 50 * 60 * 1000);
+
+    return () => clearInterval(refreshInterval);
+  }, [isAuthenticated]);
 
   const insertApplication = async (
     jobId, status, currentDateTime,
@@ -74,16 +94,24 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
-    const res = await authApi.login(email, password);
-    if (res.ok) {
-      const userData = await res.json();
-      setIsAuthenticated(true);
-      setUser(userData.user);
-      setErrorCall('');
-      return { success: true };
-    } else {
-      const data = await res.json();
-      setErrorCall(data.message);
+    try {
+      const res = await authApi.login(email, password);
+      if (res.ok) {
+        const userData = await res.json();
+        setIsAuthenticated(true);
+        setUser(userData.user);
+        setErrorCall('');
+        return { success: true };
+      } else {
+        const data = await res.json();
+        setErrorCall(data.message || 'Login failed');
+        setIsAuthenticated(false);
+        setUser(null);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrorCall('Network error. Please check your connection.');
       setIsAuthenticated(false);
       setUser(null);
       return { success: false };
@@ -101,9 +129,15 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await authApi.logout();
-    setIsAuthenticated(false);
-    setUser(null);
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsAuthenticated(false);
+      setUser(null);
+      setErrorCall('');
+    }
   };
 
   const getFinishedJobs = async () => {
@@ -117,14 +151,20 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (email, password, firstName, lastName, dob) => {
-    const res = await authApi.register(email, password, firstName, lastName, dob);
-    if (res.ok) {
-      setErrorCall('');
-      return { success: true };
-    } else {
-      const data = await res.json();
-      setErrorCall(data.message || 'Registration failed');
-      return { success: false, message: data.message };
+    try {
+      const res = await authApi.register(email, password, firstName, lastName, dob);
+      if (res.ok) {
+        setErrorCall('');
+        return { success: true };
+      } else {
+        const data = await res.json();
+        setErrorCall(data.message || 'Registration failed');
+        return { success: false, message: data.message };
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      setErrorCall('Network error. Please check your connection.');
+      return { success: false, message: 'Network error. Please check your connection.' };
     }
   };
 

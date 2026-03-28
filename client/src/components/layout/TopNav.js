@@ -4,6 +4,10 @@ import { useAuthUser } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Outlet, useEffect } from 'react-router-dom';
 
+// TopNav displays user data safely:
+// - React automatically escapes all text content in JSX (prevents XSS)
+// - User data from API is treated as untrusted and escaped before rendering
+// - No dangerouslySetInnerHTML used anywhere in this component
 const TopNav = () => {
     const navigate = useNavigate();
     const { logout, user, isAuthenticated } = useAuthUser();
@@ -36,7 +40,7 @@ const TopNav = () => {
                 <div>
                     <Dropdown>
                         <Dropdown.Toggle variant="dark" id="dropdown-basic">
-                            Good Day {user.firstName}
+                            Good Day {user?.firstName || 'User'}
                         </Dropdown.Toggle>
                         <Dropdown.Menu>
                             <Dropdown.Item onClick={gotoHomeJob}>Dashboard</Dropdown.Item>
