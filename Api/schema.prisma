@@ -24,6 +24,7 @@ model User {
   resumes            Resume[]
   generatedContent   GeneratedContent[]
   agentLogs          AgentLog[]
+  followUps          FollowUp[]
 }
 
 model Application {
@@ -100,11 +101,35 @@ model AgentLog {
   id        Int      @id @default(autoincrement())
   userId    String
   user      User     @relation(fields: [userId], references: [email], onDelete: Cascade)
-  agentType String   // "cover_letter" | "cold_email"
+  agentType String   // "cover_letter" | "cold_email" | "follow_up" | "analytics"
   action    String
   input     Json?
   output    Json?
   status    String   // "success" | "failed"
   error     String?  @db.Text
   createdAt DateTime @default(now())
+}
+
+model FollowUp {
+  id              Int      @id @default(autoincrement())
+  userId          String
+  user            User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+  applicationId   Int
+  jobListingId    String
+  jobTitle        String
+  companyName     String
+
+  emailSubject    String   @db.VarChar(500)
+  emailBody       String   @db.LongText
+  followUpCount   Int      @default(1) // 1st, 2nd, or 3rd follow-up
+
+  status          String   @default("pending") // "pending" | "approved" | "sent"
+  dismissed       Boolean  @default(false)
+  sentAt          DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
 }

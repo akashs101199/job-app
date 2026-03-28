@@ -20,6 +20,9 @@ const ENDPOINTS = {
   AGENT_INTERVIEW_PREP: `${API_BASE_URL}/agent/interview-prep`,
   AGENT_INSIGHTS: `${API_BASE_URL}/agent/insights`,
   AGENT_MARKET_TRENDS: `${API_BASE_URL}/agent/market-trends`,
+  AGENT_FOLLOW_UPS: `${API_BASE_URL}/agent/follow-ups`,
+  AGENT_STALE_APPLICATIONS: `${API_BASE_URL}/agent/stale-applications`,
+  AGENT_GENERATE_FOLLOW_UPS: `${API_BASE_URL}/agent/follow-ups/generate`,
 };
 
 export { API_BASE_URL, ENDPOINTS };

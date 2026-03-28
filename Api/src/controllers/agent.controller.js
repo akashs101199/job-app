@@ -4,6 +4,16 @@ const { logAgentAction } = require('../services/ai/agentLog.service');
 const { calculateMatchScore } = require('../services/ai/matching.service');
 const { generateInterviewPrep } = require('../services/ai/interviewPrep.service');
 const { generateUserInsights, generateMarketTrends } = require('../services/ai/analytics.service');
+const {
+  getStaleApplications,
+  generateAllFollowUps,
+  getPendingFollowUps,
+  getAllFollowUps,
+  approveFollowUp,
+  dismissFollowUp,
+  updateFollowUpEmail,
+  markFollowUpAsSent,
+} = require('../services/ai/followUp.service');
 
 const generateCoverLetterHandler = async (req, res) => {
   const { jobId, jobTitle, companyName, jobDescription, jobHighlights } = req.body;
@@ -537,6 +547,259 @@ const getMarketTrendsHandler = async (req, res) => {
   }
 };
 
+const getFollowUpsHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const followUps = await getPendingFollowUps(userId, 50);
+
+    res.json({
+      success: true,
+      data: followUps,
+    });
+  } catch (error) {
+    console.error('Error fetching follow-ups:', error);
+    res.status(500).json({
+      error: 'Failed to fetch follow-ups',
+      message: error.message,
+    });
+  }
+};
+
+const getStaleApplicationsHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const applications = await getStaleApplications(userId);
+
+    res.json({
+      success: true,
+      data: applications,
+    });
+  } catch (error) {
+    console.error('Error fetching stale applications:', error);
+    res.status(500).json({
+      error: 'Failed to fetch stale applications',
+      message: error.message,
+    });
+  }
+};
+
+const generateFollowUpSuggestionsHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const followUps = await generateAllFollowUps(userId);
+
+    // Log the action
+    await logAgentAction(
+      userId,
+      'follow_up',
+      'generate_suggestions',
+      {},
+      { followUpCount: followUps.length },
+      'success'
+    ).catch(err => console.error('Error logging follow-up generation:', err));
+
+    res.json({
+      success: true,
+      data: followUps,
+      message: `Generated ${followUps.length} follow-up suggestion(s)`,
+    });
+  } catch (error) {
+    console.error('Error generating follow-ups:', error);
+
+    await logAgentAction(
+      userId,
+      'follow_up',
+      'generate_suggestions',
+      {},
+      null,
+      'failed',
+      error.message
+    ).catch(err => console.error('Error logging failed action:', err));
+
+    res.status(500).json({
+      error: 'Failed to generate follow-ups',
+      message: error.message,
+    });
+  }
+};
+
+const approveFollowUpHandler = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!id) {
+    return res.status(400).json({ error: 'Follow-up ID is required' });
+  }
+
+  try {
+    const followUp = await approveFollowUp(parseInt(id), userId);
+
+    // Log the action
+    await logAgentAction(
+      userId,
+      'follow_up',
+      'approve',
+      { followUpId: id },
+      { status: 'approved' },
+      'success'
+    ).catch(err => console.error('Error logging action:', err));
+
+    res.json({
+      success: true,
+      data: followUp,
+    });
+  } catch (error) {
+    console.error('Error approving follow-up:', error);
+    res.status(500).json({
+      error: 'Failed to approve follow-up',
+      message: error.message,
+    });
+  }
+};
+
+const dismissFollowUpHandler = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!id) {
+    return res.status(400).json({ error: 'Follow-up ID is required' });
+  }
+
+  try {
+    const followUp = await dismissFollowUp(parseInt(id), userId);
+
+    // Log the action
+    await logAgentAction(
+      userId,
+      'follow_up',
+      'dismiss',
+      { followUpId: id },
+      { status: 'dismissed' },
+      'success'
+    ).catch(err => console.error('Error logging action:', err));
+
+    res.json({
+      success: true,
+      data: followUp,
+    });
+  } catch (error) {
+    console.error('Error dismissing follow-up:', error);
+    res.status(500).json({
+      error: 'Failed to dismiss follow-up',
+      message: error.message,
+    });
+  }
+};
+
+const editFollowUpHandler = async (req, res) => {
+  const { id } = req.params;
+  const { emailSubject, emailBody } = req.body;
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!id) {
+    return res.status(400).json({ error: 'Follow-up ID is required' });
+  }
+
+  if (!emailSubject || !emailBody) {
+    return res.status(400).json({ error: 'emailSubject and emailBody are required' });
+  }
+
+  try {
+    const followUp = await updateFollowUpEmail(parseInt(id), userId, {
+      emailSubject,
+      emailBody,
+    });
+
+    // Log the action
+    await logAgentAction(
+      userId,
+      'follow_up',
+      'edit',
+      { followUpId: id },
+      { updated: true },
+      'success'
+    ).catch(err => console.error('Error logging action:', err));
+
+    res.json({
+      success: true,
+      data: followUp,
+    });
+  } catch (error) {
+    console.error('Error editing follow-up:', error);
+    res.status(500).json({
+      error: 'Failed to edit follow-up',
+      message: error.message,
+    });
+  }
+};
+
+const sendFollowUpHandler = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!id) {
+    return res.status(400).json({ error: 'Follow-up ID is required' });
+  }
+
+  try {
+    // Mark as sent (in production, would actually send email via Nodemailer/SendGrid)
+    const followUp = await markFollowUpAsSent(parseInt(id), userId);
+
+    // Log the action
+    await logAgentAction(
+      userId,
+      'follow_up',
+      'send',
+      { followUpId: id },
+      { status: 'sent', sentAt: new Date() },
+      'success'
+    ).catch(err => console.error('Error logging action:', err));
+
+    res.json({
+      success: true,
+      data: followUp,
+      message: 'Follow-up marked as sent',
+    });
+  } catch (error) {
+    console.error('Error sending follow-up:', error);
+    res.status(500).json({
+      error: 'Failed to send follow-up',
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   generateCoverLetterHandler,
   getCoverLettersHandler,
@@ -547,4 +810,11 @@ module.exports = {
   getInterviewPrepHandler,
   getInsightsHandler,
   getMarketTrendsHandler,
+  getFollowUpsHandler,
+  getStaleApplicationsHandler,
+  generateFollowUpSuggestionsHandler,
+  approveFollowUpHandler,
+  dismissFollowUpHandler,
+  editFollowUpHandler,
+  sendFollowUpHandler,
 };
