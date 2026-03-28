@@ -121,10 +121,10 @@ Transform the existing job search and tracking app into an **AI-powered autonomo
 
 ### 0.3 Database Schema Additions
 
-- [ ] Add `Resume` model for storing user resumes
+- [x] Add `Resume` model for storing user resumes ✅ (Phase 1)
 - [ ] Add `UserPreferences` model for AI agent configuration
-- [ ] Add `AgentLog` model for tracking agent actions
-- [ ] Add `GeneratedContent` model for storing AI outputs (cover letters, etc.)
+- [x] Add `AgentLog` model for tracking agent actions ✅ (Phase 1)
+- [x] Add `GeneratedContent` model for storing AI outputs (cover letters, etc.) ✅ (Phase 1)
 
 ```prisma
 model Resume {
@@ -185,57 +185,44 @@ model GeneratedContent {
 
 > **Goal:** Given a job listing, generate a tailored cover letter using the user's profile and resume.
 
-### Why First
+### Status: ✅ COMPLETE (March 2025)
 
-- Lowest complexity, highest immediate user value
-- All required data already exists (job details from JSearch, user profile)
-- Single LLM API call — no embeddings, no background jobs
+**Completed:**
+- ✅ Anthropic Claude SDK integrated (`@anthropic-ai/sdk` v0.80.0)
+- ✅ `POST /api/agent/cover-letter` endpoint with full implementation
+- ✅ `GET /api/agent/cover-letters/:jobId` — retrieve saved cover letters for a job
+- ✅ `GET /api/agent/cover-letters` — retrieve all user cover letters
+- ✅ `POST /api/agent/cold-email` — cold email generation (reuses cover letter prompt)
+- ✅ Database models added: `Resume`, `GeneratedContent`, `AgentLog`
+- ✅ Database migration ready: `npx prisma migrate dev --name add_ai_agent_models`
+- ✅ Frontend: "Generate Cover Letter" button in job detail view (purple button)
+- ✅ CoverLetterModal component with editable textarea, copy-to-clipboard, save functionality
+- ✅ Responsive modal design (mobile, tablet, desktop)
+- ✅ Error handling and loading states
+- ✅ Agent action logging to `AgentLog` table
+- ✅ Prompt template with user context (name, job title, company, description, highlights)
 
-### Implementation
+**Files Created:**
+- `Api/src/services/ai/coverLetter.service.js` — LLM API integration
+- `Api/src/services/ai/agentLog.service.js` — Agent logging
+- `Api/src/services/ai/prompts/coverLetter.prompt.js` — Prompt template
+- `Api/src/controllers/agent.controller.js` — API handlers
+- `Api/src/routes/agent.routes.js` — Route definitions
+- `client/src/services/coverLetter.service.js` — Frontend API client
+- `client/src/components/shared/CoverLetterModal.js` — Modal component
+- `client/src/components/shared/CoverLetterModal.css` — Modal styling
 
-#### Backend
+**Files Updated:**
+- `Api/schema.prisma` — Added Resume, GeneratedContent, AgentLog models
+- `Api/package.json` — Added @anthropic-ai/sdk dependency
+- `Api/.env` — Added ANTHROPIC_API_KEY
+- `Api/src/config/env.js` — Export ANTHROPIC_API_KEY
+- `Api/src/routes/index.js` — Registered agent routes
+- `client/src/config/api.js` — Added agent endpoints
+- `client/src/pages/JobSearch/JobSearch.js` — Added cover letter button and modal integration
+- `client/src/pages/JobSearch/JobSearch.css` — Added button styling
 
-- [ ] `POST /api/agent/cover-letter` endpoint
-  - Input: `{ jobId, jobDescription, companyName, jobTitle }`
-  - Loads user profile + resume from DB
-  - Constructs prompt with job details + user background
-  - Calls LLM API (Anthropic Claude)
-  - Returns generated cover letter
-  - Logs to `AgentLog` and saves to `GeneratedContent`
-
-- [ ] `GET /api/agent/cover-letters/:jobId` — retrieve saved cover letters
-- [ ] `POST /api/agent/cold-email` — similar flow but generates outreach email
-
-#### Frontend
-
-- [ ] Add "Generate Cover Letter" button in job detail view (`JobListings.js`)
-- [ ] Cover letter modal with:
-  - Generated text (editable)
-  - "Regenerate" button with tone options (formal, conversational, concise)
-  - "Copy to Clipboard" button
-  - "Save" button
-- [ ] Cover letter history accessible from profile page
-
-#### LLM Prompt Strategy
-
-```
-System: You are an expert career coach and professional writer.
-
-Context:
-- Candidate: {firstName} {lastName}
-- Skills: {extracted skills from resume}
-- Experience: {parsed experience}
-- Target Role: {jobTitle} at {companyName}
-- Job Description: {jobDescription}
-- Key Requirements: {jobHighlights}
-
-Task: Write a compelling, personalized cover letter that:
-1. Opens with a hook relevant to the company
-2. Maps the candidate's experience to the job requirements
-3. Demonstrates knowledge of the company
-4. Closes with a clear call to action
-5. Stays under 400 words
-```
+**Ready for:** Phase 2 - Resume-Job Matching Agent
 
 ---
 

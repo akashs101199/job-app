@@ -17,4 +17,5 @@ module.exports = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
   SESSION_SECRET: process.env.SESSION_SECRET || 'default-session-secret',
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
 };

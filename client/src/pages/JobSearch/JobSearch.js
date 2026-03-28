@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './JobSearch.css';
 import { useAuthUser } from '../../context/AuthContext';
 import { searchJobs as searchJobsApi } from '../../services/jobs.service';
+import { generateCoverLetterApi } from '../../services/coverLetter.service';
+import CoverLetterModal from '../../components/shared/CoverLetterModal';
 
 const JobSearch = () => {
     const [jobs, setJobs] = useState([]);
@@ -19,6 +21,14 @@ const JobSearch = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [jobCache, setJobCache] = useState({});
     const [appliedJobs, setAppliedJobs] = useState(new Set());
+    const [coverLetterModal, setCoverLetterModal] = useState({
+        isOpen: false,
+        content: '',
+        isLoading: false,
+        error: null,
+        jobTitle: '',
+        companyName: '',
+    });
 
     const platforms = [
         { value: 'LinkedIn', label: 'LinkedIn' },
@@ -158,6 +168,69 @@ const JobSearch = () => {
         return appliedJobs.has(jobId);
     };
 
+    const handleGenerateCoverLetter = async (job) => {
+        setCoverLetterModal({
+            isOpen: true,
+            content: '',
+            isLoading: true,
+            error: null,
+            jobTitle: job.job_title,
+            companyName: job.employer_name,
+        });
+
+        try {
+            const response = await generateCoverLetterApi({
+                jobId: job.job_id,
+                jobTitle: job.job_title,
+                companyName: job.employer_name,
+                jobDescription: job.job_description || '',
+                jobHighlights: job.job_highlights || {},
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.error || 'Failed to generate cover letter');
+            }
+
+            const data = await response.json();
+
+            setCoverLetterModal({
+                isOpen: true,
+                content: data.content,
+                isLoading: false,
+                error: null,
+                jobTitle: job.job_title,
+                companyName: job.employer_name,
+            });
+        } catch (err) {
+            setCoverLetterModal({
+                isOpen: true,
+                content: '',
+                isLoading: false,
+                error: err.message,
+                jobTitle: job.job_title,
+                companyName: job.employer_name,
+            });
+        }
+    };
+
+    const handleCloseCoverLetterModal = () => {
+        setCoverLetterModal({
+            isOpen: false,
+            content: '',
+            isLoading: false,
+            error: null,
+            jobTitle: '',
+            companyName: '',
+        });
+    };
+
+    const handleSaveCoverLetter = (content) => {
+        // For now, just close the modal after copying
+        // In future, this could save to user's account
+        handleCloseCoverLetterModal();
+    };
+
     return (
         <div className="jl-job-listings-container">
             <div className="jl-filters">
@@ -209,6 +282,13 @@ const JobSearch = () => {
                                             ))}
                                         </div>
                                     )}
+                                    <button
+                                        className="jl-generate-coverletter-button"
+                                        onClick={() => handleGenerateCoverLetter(selectedJob)}
+                                    >
+                                        Generate Cover Letter
+                                    </button>
+
                                     <div className="jl-apply-options">
                                         <h4>Apply On:</h4>
                                         <div className="jl-platform-links">
@@ -280,6 +360,17 @@ const JobSearch = () => {
                     )}
                 </>
             )}
+
+            <CoverLetterModal
+                isOpen={coverLetterModal.isOpen}
+                content={coverLetterModal.content}
+                isLoading={coverLetterModal.isLoading}
+                error={coverLetterModal.error}
+                jobTitle={coverLetterModal.jobTitle}
+                companyName={coverLetterModal.companyName}
+                onClose={handleCloseCoverLetterModal}
+                onSave={handleSaveCoverLetter}
+            />
         </div>
     );
 };

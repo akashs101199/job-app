@@ -12,6 +12,10 @@ const ENDPOINTS = {
   MY_JOB_IDS: `${API_BASE_URL}/myJobIds`,
   MY_JOB_IDS_BY_STATUS: `${API_BASE_URL}/myJobIdsByStatus`,
   JOBS_SEARCH: `${API_BASE_URL}/jobs/search`,
+  AGENT_GENERATE_COVER_LETTER: `${API_BASE_URL}/agent/cover-letter`,
+  AGENT_GET_COVER_LETTERS: `${API_BASE_URL}/agent/cover-letters`,
+  AGENT_GET_ALL_COVER_LETTERS: `${API_BASE_URL}/agent/cover-letters`,
+  AGENT_GENERATE_COLD_EMAIL: `${API_BASE_URL}/agent/cold-email`,
 };
 
 export { API_BASE_URL, ENDPOINTS };
