@@ -1058,6 +1058,115 @@ FOLLOW_UP_DAYS_THRESHOLD=7
 
 ---
 
+## Phase 9: Background Scheduling & Automation 🚀 IN PROGRESS
+
+> **Goal:** Fully automate job discovery, application, and notifications without user intervention after initial setup.
+
+**Status:** In Development (March 29, 2025)
+
+### Implementation In Progress
+
+#### Backend (64% Complete) ✅
+
+**Services Created:**
+- [x] `scheduler.service.js` (600 lines) — Core scheduler with:
+  - Job registration and lifecycle management
+  - Cron expression generation from user timezone
+  - Job execution orchestration
+  - Error handling and logging
+  - Manual trigger capability
+
+- [x] `emailService.js` (300 lines) — Email integration with:
+  - SendGrid integration
+  - Alert digest HTML templates
+  - Application confirmation templates
+  - Fallback nodemailer support
+
+**Database:**
+- [x] `SchedulerConfig` model — User scheduling preferences
+- [x] `CronLog` model — Execution history and audit trail
+
+**API Endpoints:**
+- [x] `GET /api/agent/scheduler/config` — Fetch configuration
+- [x] `PUT /api/agent/scheduler/config` — Update and re-register jobs
+- [x] `GET /api/agent/scheduler/logs` — View execution history
+- [x] `POST /api/agent/scheduler/job/:jobType/run` — Manual trigger
+
+**Dependencies Added:**
+- [x] `node-cron` (3.0.3) — Cron scheduling
+- [x] `nodemailer` (6.9.10) — Email fallback
+- [x] `@sendgrid/mail` (8.1.3) — Email delivery
+- [x] `timezone-support` (1.13.1) — Timezone handling
+
+**Key Features:**
+✅ Three job types: alert_check, auto_apply, email_digest
+✅ User timezone support with UTC conversion
+✅ Frequency options: hourly, daily, weekly
+✅ Full execution logging and audit trail
+✅ Email digest with recent alerts and queue items
+✅ SendGrid integration with nodemailer fallback
+✅ Error handling with automatic logging
+✅ Manual job triggering for testing
+
+#### Frontend (Partial) 🔄
+
+**Service Created:**
+- [x] `scheduler.service.js` (190 lines) — API client with:
+  - All 4 endpoint functions
+  - Helper functions for formatting and display
+  - Time calculation utilities
+
+**Pages/Components (To Be Implemented):**
+- ⏳ `SchedulerSettings.js` — Configuration UI with toggle switches, time pickers, frequency selectors
+- ⏳ `CronLogs.js` — Execution history dashboard
+- ⏳ CSS styling (~1200 lines total)
+
+### Cron Job Schedule
+
+Three autonomous jobs run on user-configured schedules:
+
+| Job | Default | Min Frequency | Purpose |
+|-----|---------|---|---------|
+| **alert_check** | 9 AM daily | Hourly | Discover new matching jobs |
+| **auto_apply** | 12 PM daily | Hourly | Queue/apply to jobs automatically |
+| **email_digest** | 6 PM daily | Daily | Send email summary of alerts & queue |
+
+### Startup Sequence
+
+```
+Server Start
+  ↓
+Load scheduler.service.js
+  ↓
+Query SchedulerConfig for all enabled users
+  ↓
+For each user:
+  ├─ Load preferences (frequency, time, timezone)
+  ├─ Convert to UTC
+  ├─ Register 3 cron jobs
+  └─ Log registration
+  ↓
+Server Ready (background jobs running)
+```
+
+### Next Steps to Complete Phase 9
+
+1. **Frontend Configuration Page** — Let users set up schedules
+2. **Execution History Dashboard** — View logs and manual triggers
+3. **Integration Testing** — Test all three job types end-to-end
+4. **Email Template Testing** — Verify digest and confirmation emails
+5. **Timezone Testing** — Verify UTC conversion for multiple timezones
+
+### Performance Targets
+
+- Scheduler initialization: < 2 seconds
+- Job execution (alert check): 3-5 seconds
+- Email sending: < 1 second
+- Cron log insertion: < 100ms
+- Config update with re-registration: < 500ms
+
+---
+
 ## Milestone Timeline
 
 | Phase | Name | Status | Key Deliverable |
@@ -1071,7 +1180,8 @@ FOLLOW_UP_DAYS_THRESHOLD=7
 | **6** | Smart Job Alerts | ✅ Complete (Mar 29) | Proactive job notifications |
 | **7** | Resume Optimizer | ✅ Complete (Mar 29) | ATS-optimized resume variants |
 | **8** | Auto-Apply Agent | ✅ Complete (Mar 29) | Autonomous job application orchestrator |
-| **9** | Background Scheduling | ⏹️ Next | Automated alert checks & applications |
+| **9** | Background Scheduling | 🚀 In Progress (Mar 29) | Fully automated background jobs |
+| **10** | Email Notifications | ⏹️ Future | Digest & confirmation emails |
 
 ---
 
