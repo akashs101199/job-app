@@ -21,6 +21,7 @@ import MarketTrendsDetails from './pages/Analytics/MarketTrendsDetails';
 import FollowUpQueue from './pages/FollowUpQueue/FollowUpQueue';
 import Preferences from './pages/Preferences/Preferences';
 import Alerts from './pages/Alerts/Alerts';
+import Resume from './pages/Resume/Resume';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -46,6 +47,7 @@ root.render(
           <Route path="follow-ups" element={<FollowUpQueue />} />
           <Route path="preferences" element={<Preferences />} />
           <Route path="alerts" element={<Alerts />} />
+          <Route path="resume" element={<Resume />} />
         </Route>
       </Routes>
     </BrowserRouter>

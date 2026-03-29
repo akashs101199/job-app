@@ -28,6 +28,10 @@ const ENDPOINTS = {
   AGENT_ALERTS: `${API_BASE_URL}/agent/alerts`,
   AGENT_ALERTS_CHECK: `${API_BASE_URL}/agent/alerts/check`,
   AGENT_ALERTS_UNREAD: `${API_BASE_URL}/agent/alerts/unread`,
+  AGENT_RESUME_UPLOAD: `${API_BASE_URL}/agent/resume/upload`,
+  AGENT_RESUMES: `${API_BASE_URL}/agent/resumes`,
+  AGENT_RESUME_ANALYZE: `${API_BASE_URL}/agent/resume/analyze`,
+  AGENT_RESUME_TAILOR: `${API_BASE_URL}/agent/resume/tailor`,
 };
 
 export { API_BASE_URL, ENDPOINTS };
