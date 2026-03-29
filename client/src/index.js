@@ -26,6 +26,7 @@ import AutoApplyDashboard from './pages/AutoApply/AutoApplyDashboard';
 import AutoApplySettings from './pages/AutoApply/AutoApplySettings';
 import SchedulerSettings from './pages/Scheduler/SchedulerSettings';
 import CronLogs from './pages/Scheduler/CronLogs';
+import NotificationPreferences from './pages/NotificationPreferences/NotificationPreferences';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -56,6 +57,7 @@ root.render(
           <Route path="auto-apply-settings" element={<AutoApplySettings />} />
           <Route path="scheduler-settings" element={<SchedulerSettings />} />
           <Route path="scheduler-logs" element={<CronLogs />} />
+          <Route path="notification-preferences" element={<NotificationPreferences />} />
         </Route>
       </Routes>
     </BrowserRouter>
