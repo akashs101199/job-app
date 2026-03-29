@@ -35,6 +35,8 @@ model User {
   autoApplyLogs      AutoApplyLog[]
   schedulerConfig    SchedulerConfig?
   cronLogs           CronLog[]
+  notificationPrefs  NotificationPreference?
+  emailLogs          EmailLog[]
 }
 
 model Application {
@@ -394,4 +396,103 @@ model CronLog {
   @@index([userId])
   @@index([userId, jobType])
   @@index([executedAt])
+}
+
+// Phase 10: Email Notifications & Templates
+
+model EmailTemplate {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique // "daily_digest", "auto_apply_confirmation", etc
+  subject      String   // Email subject line with {{placeholders}}
+  htmlContent  String   @db.LongText // HTML template with {{placeholders}}
+  textContent  String   @db.LongText // Plain text fallback
+  category     String   // "digest" | "transactional" | "marketing"
+  isActive     Boolean  @default(true)
+  variables    Json     // Required template variables: ["jobCount", "userName", etc]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([name])
+  @@index([category])
+}
+
+model NotificationPreference {
+  userId              String   @id
+  user                User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+
+  // Notification types and frequencies
+  dailyAlertDigest    Boolean  @default(true)
+  dailyAlertTime      String   @default("18:00") // HH:mm format
+
+  weeklyDigest        Boolean  @default(true)
+  weeklyDigestDay     String   @default("sunday") // day of week
+  weeklyDigestTime    String   @default("09:00")
+
+  autoApplyConfirm    Boolean  @default(true)
+  interviewNotif      Boolean  @default(true)
+  followUpReminder    Boolean  @default(true)
+  weeklyStats         Boolean  @default(true)
+  milestoneNotif      Boolean  @default(true)
+  actionRequired      Boolean  @default(true)
+
+  // Delivery preferences
+  emailGrouping       String   @default("digest") // "individual" | "digest"
+  contentLevel        String   @default("detailed") // "summary" | "detailed"
+
+  // Opt-out management
+  unsubscribedTypes   Json     @default("[]") // Array of notification type strings
+  globalOptOut        Boolean  @default(false)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model EmailLog {
+  id              Int      @id @default(autoincrement())
+  userId          String
+  user            User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+
+  templateId      Int?
+  notificationType String // "daily_digest", "auto_apply_confirmation", etc
+  subject         String
+  recipients      Json     // Array of email addresses
+
+  sentAt          DateTime @default(now())
+  deliveredAt     DateTime? // After SendGrid webhook
+  failedAt        DateTime?
+  failureReason   String?
+
+  // Analytics
+  opens           Int      @default(0)
+  clicks          Int      @default(0)
+  bounces         Int      @default(0)
+
+  metadata        Json?    // { jobCount: 5, statsIncluded: true, etc }
+
+  @@index([userId])
+  @@index([sentAt])
+  @@index([notificationType])
+  @@index([userId, sentAt])
+}
+
+model EmailMetrics {
+  id              Int      @id @default(autoincrement())
+  notificationType String   @unique // "daily_digest", "auto_apply_confirmation", etc
+
+  sent            Int      @default(0)
+  delivered       Int      @default(0)
+  bounced         Int      @default(0)
+  opened          Int      @default(0)
+  clicked         Int      @default(0)
+
+  openRate        Float    @default(0.0)
+  clickRate       Float    @default(0.0)
+  bounceRate      Float    @default(0.0)
+
+  updatedAt       DateTime @updatedAt
+
+  @@index([notificationType])
 }

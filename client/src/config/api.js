@@ -39,6 +39,9 @@ const ENDPOINTS = {
   AGENT_AUTO_APPLY_STATS: `${API_BASE_URL}/agent/auto-apply/stats`,
   AGENT_SCHEDULER_CONFIG: `${API_BASE_URL}/agent/scheduler/config`,
   AGENT_SCHEDULER_LOGS: `${API_BASE_URL}/agent/scheduler/logs`,
+  AGENT_NOTIFICATIONS_PREFERENCES: `${API_BASE_URL}/agent/notifications/preferences`,
+  AGENT_NOTIFICATIONS_LOGS: `${API_BASE_URL}/agent/notifications/logs`,
+  AGENT_NOTIFICATIONS_METRICS: `${API_BASE_URL}/agent/notifications/metrics`,
 };
 
 export { API_BASE_URL, ENDPOINTS };

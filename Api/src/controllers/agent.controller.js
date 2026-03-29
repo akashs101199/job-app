@@ -1699,6 +1699,134 @@ const manuallyTriggerJobHandler = async (req, res) => {
   }
 };
 
+// Phase 10: Notification Handlers
+
+import * as notificationService from '../services/notifications/notification.service.js';
+
+const getNotificationPreferencesHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const prefs = await notificationService.getNotificationPreferences(userId);
+    res.json({ success: true, data: prefs });
+  } catch (error) {
+    console.error('Error fetching notification preferences:', error);
+    res.status(500).json({
+      error: 'Failed to fetch notification preferences',
+      message: error.message,
+    });
+  }
+};
+
+const updateNotificationPreferencesHandler = async (req, res) => {
+  const userId = req.user?.email;
+  const updates = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const updated = await notificationService.updateNotificationPreferences(userId, updates);
+
+    await logAgentAction(
+      userId,
+      'notifications',
+      'update_preferences',
+      updates,
+      { preferencesUpdated: true },
+      'success'
+    ).catch(err => console.error('Error logging action:', err));
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Error updating notification preferences:', error);
+    res.status(500).json({
+      error: 'Failed to update notification preferences',
+      message: error.message,
+    });
+  }
+};
+
+const getEmailLogsHandler = async (req, res) => {
+  const userId = req.user?.email;
+  const { type, limit = 50, offset = 0 } = req.query;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const result = await notificationService.getEmailLogs(userId, type, parseInt(limit), parseInt(offset));
+    res.json({
+      success: true,
+      data: result.logs,
+      total: result.total,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+  } catch (error) {
+    console.error('Error fetching email logs:', error);
+    res.status(500).json({
+      error: 'Failed to fetch email logs',
+      message: error.message,
+    });
+  }
+};
+
+const getNotificationMetricsHandler = async (req, res) => {
+  const { type } = req.params;
+
+  if (!type) {
+    return res.status(400).json({ error: 'Notification type required' });
+  }
+
+  try {
+    const metrics = await notificationService.getNotificationMetrics(type);
+    res.json({ success: true, data: metrics });
+  } catch (error) {
+    console.error('Error fetching notification metrics:', error);
+    res.status(500).json({
+      error: 'Failed to fetch notification metrics',
+      message: error.message,
+    });
+  }
+};
+
+const handleSendGridWebhookHandler = async (req, res) => {
+  // This will be implemented with SendGrid signature verification
+  // For now, just acknowledge receipt
+  res.status(200).send('OK');
+};
+
+const handleUnsubscribeLinkHandler = async (req, res) => {
+  const { token } = req.params;
+
+  try {
+    if (!token) {
+      return res.status(400).json({ error: 'Token required' });
+    }
+
+    const { userId, notificationType } = notificationService.decodeUnsubscribeToken(token);
+    await notificationService.unsubscribeFromType(userId, notificationType);
+
+    res.json({
+      success: true,
+      message: `Unsubscribed from ${notificationType} notifications`,
+    });
+  } catch (error) {
+    console.error('Error processing unsubscribe:', error);
+    res.status(400).json({
+      error: 'Invalid or expired unsubscribe link',
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   generateCoverLetterHandler,
   getCoverLettersHandler,
@@ -1741,4 +1869,10 @@ module.exports = {
   updateSchedulerConfigHandler,
   getSchedulerLogsHandler,
   manuallyTriggerJobHandler,
+  getNotificationPreferencesHandler,
+  updateNotificationPreferencesHandler,
+  getEmailLogsHandler,
+  getNotificationMetricsHandler,
+  handleSendGridWebhookHandler,
+  handleUnsubscribeLinkHandler,
 };

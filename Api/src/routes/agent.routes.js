@@ -57,4 +57,12 @@ router.put('/scheduler/config', requireAuth, agentController.updateSchedulerConf
 router.get('/scheduler/logs', requireAuth, agentController.getSchedulerLogsHandler);
 router.post('/scheduler/job/:jobType/run', requireAuth, agentController.manuallyTriggerJobHandler);
 
+// Notification routes (Phase 10)
+router.get('/notifications/preferences', requireAuth, agentController.getNotificationPreferencesHandler);
+router.put('/notifications/preferences', requireAuth, agentController.updateNotificationPreferencesHandler);
+router.get('/notifications/logs', requireAuth, agentController.getEmailLogsHandler);
+router.get('/notifications/metrics/:type', requireAuth, agentController.getNotificationMetricsHandler);
+router.post('/webhooks/sendgrid', agentController.handleSendGridWebhookHandler);
+router.post('/notifications/unsubscribe/:token', agentController.handleUnsubscribeLinkHandler);
+
 module.exports = router;
