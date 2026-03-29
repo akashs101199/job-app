@@ -40,4 +40,15 @@ router.get('/resumes', requireAuth, agentController.listResumesHandler);
 router.post('/resume/analyze', requireAuth, agentController.analyzeResumeHandler);
 router.post('/resume/tailor', requireAuth, agentController.tailorResumeHandler);
 
+// Auto-Apply routes
+router.post('/auto-apply/config/initialize', requireAuth, agentController.initializeAutoApplyConfigHandler);
+router.get('/auto-apply/config', requireAuth, agentController.getAutoApplyConfigHandler);
+router.put('/auto-apply/config', requireAuth, agentController.updateAutoApplyConfigHandler);
+router.post('/auto-apply/disable', requireAuth, agentController.disableAutoApplyHandler);
+router.post('/auto-apply/check', requireAuth, agentController.checkAndQueueApplicationsHandler);
+router.get('/auto-apply/queue', requireAuth, agentController.getQueueHandler);
+router.post('/auto-apply/queue/:queueId/approve', requireAuth, agentController.approveQueueItemHandler);
+router.post('/auto-apply/queue/:queueId/reject', requireAuth, agentController.rejectQueueItemHandler);
+router.get('/auto-apply/stats', requireAuth, agentController.getAutoApplyStatsHandler);
+
 module.exports = router;

@@ -32,6 +32,11 @@ const ENDPOINTS = {
   AGENT_RESUMES: `${API_BASE_URL}/agent/resumes`,
   AGENT_RESUME_ANALYZE: `${API_BASE_URL}/agent/resume/analyze`,
   AGENT_RESUME_TAILOR: `${API_BASE_URL}/agent/resume/tailor`,
+  AGENT_AUTO_APPLY_CONFIG_INITIALIZE: `${API_BASE_URL}/agent/auto-apply/config/initialize`,
+  AGENT_AUTO_APPLY_CONFIG: `${API_BASE_URL}/agent/auto-apply/config`,
+  AGENT_AUTO_APPLY_CHECK: `${API_BASE_URL}/agent/auto-apply/check`,
+  AGENT_AUTO_APPLY_QUEUE: `${API_BASE_URL}/agent/auto-apply/queue`,
+  AGENT_AUTO_APPLY_STATS: `${API_BASE_URL}/agent/auto-apply/stats`,
 };
 
 export { API_BASE_URL, ENDPOINTS };

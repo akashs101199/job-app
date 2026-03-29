@@ -43,6 +43,17 @@ const {
   summarizeChanges,
 } = require('../services/ai/resumeTailor.service');
 const { deleteUploadedFile } = require('../middleware/uploadMiddleware');
+const {
+  initializeAutoApplyConfig,
+  getAutoApplyConfig,
+  updateAutoApplyConfig,
+  disableAutoApply,
+  checkAndQueueApplications,
+  approveQueueItem,
+  rejectQueueItem,
+  getQueueForUser,
+  getAutoApplyStats,
+} = require('../services/ai/autoApply.service');
 const fs = require('fs');
 
 const generateCoverLetterHandler = async (req, res) => {
@@ -1336,6 +1347,246 @@ const tailorResumeHandler = async (req, res) => {
   }
 };
 
+// ============================================================================
+// AUTO-APPLY HANDLERS
+// ============================================================================
+
+const initializeAutoApplyConfigHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { preferredRoles, preferredLocations, minMatchScore, maxApplicationsPerDay, approvalMode } = req.body;
+
+  try {
+    const config = await initializeAutoApplyConfig(userId, {
+      preferredRoles: preferredRoles || [],
+      preferredLocations: preferredLocations || [],
+      minMatchScore: minMatchScore || 70,
+      maxApplicationsPerDay: maxApplicationsPerDay || 5,
+      approvalMode: approvalMode || 'manual',
+    });
+
+    res.json({
+      success: true,
+      data: config,
+      message: 'Auto-apply configuration initialized successfully',
+    });
+  } catch (error) {
+    console.error('Error initializing auto-apply config:', error);
+    res.status(500).json({
+      error: 'Failed to initialize auto-apply configuration',
+      message: error.message,
+    });
+  }
+};
+
+const getAutoApplyConfigHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const config = await getAutoApplyConfig(userId);
+
+    res.json({
+      success: true,
+      data: config,
+    });
+  } catch (error) {
+    console.error('Error fetching auto-apply config:', error);
+    res.status(500).json({
+      error: 'Failed to fetch auto-apply configuration',
+      message: error.message,
+    });
+  }
+};
+
+const updateAutoApplyConfigHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const updates = req.body;
+
+  try {
+    const config = await updateAutoApplyConfig(userId, updates);
+
+    res.json({
+      success: true,
+      data: config,
+      message: 'Auto-apply configuration updated successfully',
+    });
+  } catch (error) {
+    console.error('Error updating auto-apply config:', error);
+    res.status(500).json({
+      error: 'Failed to update auto-apply configuration',
+      message: error.message,
+    });
+  }
+};
+
+const disableAutoApplyHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const config = await disableAutoApply(userId);
+
+    res.json({
+      success: true,
+      data: config,
+      message: 'Auto-apply disabled successfully',
+    });
+  } catch (error) {
+    console.error('Error disabling auto-apply:', error);
+    res.status(500).json({
+      error: 'Failed to disable auto-apply',
+      message: error.message,
+    });
+  }
+};
+
+const checkAndQueueApplicationsHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const summary = await checkAndQueueApplications(userId);
+
+    res.json({
+      success: true,
+      data: summary,
+      message: `Found ${summary.discovered} jobs, queued ${summary.queued}`,
+    });
+  } catch (error) {
+    console.error('Error checking and queuing applications:', error);
+    res.status(500).json({
+      error: 'Failed to check and queue applications',
+      message: error.message,
+    });
+  }
+};
+
+const getQueueHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { status = 'pending', limit = 50, offset = 0 } = req.query;
+
+  try {
+    const queue = await getQueueForUser(userId, status, parseInt(limit), parseInt(offset));
+
+    res.json({
+      success: true,
+      data: queue,
+    });
+  } catch (error) {
+    console.error('Error fetching queue:', error);
+    res.status(500).json({
+      error: 'Failed to fetch queue',
+      message: error.message,
+    });
+  }
+};
+
+const approveQueueItemHandler = async (req, res) => {
+  const userId = req.user?.email;
+  const { queueId } = req.params;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!queueId) {
+    return res.status(400).json({ error: 'Queue ID is required' });
+  }
+
+  try {
+    const updated = await approveQueueItem(parseInt(queueId), userId);
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Application approved and submitted successfully',
+    });
+  } catch (error) {
+    console.error('Error approving queue item:', error);
+    res.status(500).json({
+      error: 'Failed to approve queue item',
+      message: error.message,
+    });
+  }
+};
+
+const rejectQueueItemHandler = async (req, res) => {
+  const userId = req.user?.email;
+  const { queueId } = req.params;
+  const { reason } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!queueId) {
+    return res.status(400).json({ error: 'Queue ID is required' });
+  }
+
+  try {
+    const updated = await rejectQueueItem(parseInt(queueId), userId, reason || '');
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Application rejected successfully',
+    });
+  } catch (error) {
+    console.error('Error rejecting queue item:', error);
+    res.status(500).json({
+      error: 'Failed to reject queue item',
+      message: error.message,
+    });
+  }
+};
+
+const getAutoApplyStatsHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const stats = await getAutoApplyStats(userId);
+
+    res.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    console.error('Error fetching auto-apply stats:', error);
+    res.status(500).json({
+      error: 'Failed to fetch statistics',
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   generateCoverLetterHandler,
   getCoverLettersHandler,
@@ -1365,4 +1616,13 @@ module.exports = {
   listResumesHandler,
   analyzeResumeHandler,
   tailorResumeHandler,
+  initializeAutoApplyConfigHandler,
+  getAutoApplyConfigHandler,
+  updateAutoApplyConfigHandler,
+  disableAutoApplyHandler,
+  checkAndQueueApplicationsHandler,
+  getQueueHandler,
+  approveQueueItemHandler,
+  rejectQueueItemHandler,
+  getAutoApplyStatsHandler,
 };
