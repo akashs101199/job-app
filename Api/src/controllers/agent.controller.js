@@ -26,6 +26,24 @@ const {
   dismissAlert,
   applyFromAlert,
 } = require('../services/ai/jobAlerts.service');
+const {
+  parseResumeFile,
+  validateFileType,
+  validateFileSize,
+  getFileExtension,
+} = require('../services/ai/resumeParser.service');
+const {
+  analyzeResume,
+  calculateQuickAtsScore,
+  formatAnalysisResults,
+} = require('../services/ai/resumeAnalysis.service');
+const {
+  tailorResumeForJob,
+  formatTailoringResults,
+  summarizeChanges,
+} = require('../services/ai/resumeTailor.service');
+const { deleteUploadedFile } = require('../middleware/uploadMiddleware');
+const fs = require('fs');
 
 const generateCoverLetterHandler = async (req, res) => {
   const { jobId, jobTitle, companyName, jobDescription, jobHighlights } = req.body;
@@ -1045,6 +1063,279 @@ const applyFromAlertHandler = async (req, res) => {
   }
 };
 
+// Resume Management Handlers
+
+const uploadResumeHandler = async (req, res) => {
+  const userId = req.user?.email;
+  const uploadedFile = req.uploadedFile;
+
+  if (!userId) {
+    await deleteUploadedFile(uploadedFile?.path);
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!uploadedFile) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  try {
+    const fileType = getFileExtension(uploadedFile.mimetype);
+
+    // Parse the resume file
+    const parseResult = await parseResumeFile(uploadedFile.path, fileType);
+
+    // Store in database
+    const resume = await prisma.userResume.create({
+      data: {
+        userId,
+        fileName: uploadedFile.originalName,
+        fileType,
+        filePath: uploadedFile.path,
+        fileSize: uploadedFile.size,
+        rawText: parseResult.text,
+      },
+    });
+
+    // Log the action
+    await logAgentAction(
+      userId,
+      'resume_management',
+      'upload_resume',
+      { fileName: uploadedFile.originalName, fileSize: uploadedFile.size },
+      { resumeId: resume.id, textLength: parseResult.text.length },
+      'success'
+    ).catch(err => console.error('Error logging action:', err));
+
+    res.json({
+      success: true,
+      data: {
+        id: resume.id,
+        fileName: resume.fileName,
+        fileType: resume.fileType,
+        uploadedAt: resume.uploadedAt,
+        characterCount: parseResult.metadata.characterCount,
+        wordCount: parseResult.metadata.wordCount,
+      },
+    });
+  } catch (error) {
+    console.error('Error uploading resume:', error);
+
+    // Clean up uploaded file
+    await deleteUploadedFile(uploadedFile?.path);
+
+    // Log the failure
+    await logAgentAction(
+      userId,
+      'resume_management',
+      'upload_resume',
+      { fileName: uploadedFile?.originalName },
+      null,
+      'failed',
+      error.message
+    ).catch(err => console.error('Error logging action:', err));
+
+    res.status(500).json({
+      error: 'Failed to upload resume',
+      message: error.message,
+    });
+  }
+};
+
+const listResumesHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const resumes = await prisma.userResume.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        fileName: true,
+        fileType: true,
+        fileSize: true,
+        uploadedAt: true,
+        _count: {
+          select: { analyses: true, tailors: true },
+        },
+      },
+      orderBy: { uploadedAt: 'desc' },
+    });
+
+    res.json({
+      success: true,
+      data: resumes,
+    });
+  } catch (error) {
+    console.error('Error listing resumes:', error);
+    res.status(500).json({
+      error: 'Failed to fetch resumes',
+      message: error.message,
+    });
+  }
+};
+
+const analyzeResumeHandler = async (req, res) => {
+  const { resumeId, jobDescription, jobTitle } = req.body;
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!resumeId) {
+    return res.status(400).json({ error: 'resumeId is required' });
+  }
+
+  try {
+    // Get the resume
+    const resume = await prisma.userResume.findUnique({
+      where: { id: parseInt(resumeId) },
+    });
+
+    if (!resume || resume.userId !== userId) {
+      return res.status(404).json({ error: 'Resume not found' });
+    }
+
+    // Analyze the resume
+    const analysisResult = await analyzeResume(
+      userId,
+      resume.rawText,
+      jobDescription || null,
+      jobTitle || null
+    );
+
+    // Format for storage
+    const formattedResult = formatAnalysisResults(analysisResult);
+
+    // Save analysis to database
+    const analysis = await prisma.resumeAnalysis.create({
+      data: {
+        userId,
+        resumeId: parseInt(resumeId),
+        atsScore: formattedResult.atsScore,
+        keywords: formattedResult.keywords,
+        sections: formattedResult.sections,
+        suggestions: formattedResult.suggestions,
+        jobDescription: jobDescription || null,
+        jobTitle: jobTitle || null,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        id: analysis.id,
+        atsScore: analysis.atsScore,
+        keywords: analysis.keywords,
+        sections: analysis.sections,
+        suggestions: analysis.suggestions,
+        targetJobFit: analysisResult.targetJobFit,
+        createdAt: analysis.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Error analyzing resume:', error);
+
+    // Log the failure
+    await logAgentAction(
+      userId,
+      'resume_analysis',
+      'analyze_resume',
+      { resumeId },
+      null,
+      'failed',
+      error.message
+    ).catch(err => console.error('Error logging action:', err));
+
+    res.status(500).json({
+      error: 'Failed to analyze resume',
+      message: error.message,
+    });
+  }
+};
+
+const tailorResumeHandler = async (req, res) => {
+  const { resumeId, jobTitle, jobDescription } = req.body;
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!resumeId || !jobTitle || !jobDescription) {
+    return res.status(400).json({
+      error: 'resumeId, jobTitle, and jobDescription are required',
+    });
+  }
+
+  try {
+    // Get the resume
+    const resume = await prisma.userResume.findUnique({
+      where: { id: parseInt(resumeId) },
+    });
+
+    if (!resume || resume.userId !== userId) {
+      return res.status(404).json({ error: 'Resume not found' });
+    }
+
+    // Tailor the resume
+    const tailorResult = await tailorResumeForJob(
+      userId,
+      resume.rawText,
+      jobDescription,
+      jobTitle
+    );
+
+    // Format for storage
+    const formattedResult = formatTailoringResults(tailorResult);
+
+    // Save tailoring log
+    const tailorLog = await prisma.resumeTailorLog.create({
+      data: {
+        userId,
+        resumeId: parseInt(resumeId),
+        jobTitle,
+        jobDescription,
+        tailoredContent: formattedResult.tailoredContent,
+        changes: formattedResult.changes,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        id: tailorLog.id,
+        tailoredContent: tailorLog.tailoredContent,
+        changes: tailorLog.changes,
+        summary: summarizeChanges(tailorLog.changes),
+        matchAnalysis: tailorResult.matchAnalysis,
+        createdAt: tailorLog.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Error tailoring resume:', error);
+
+    // Log the failure
+    await logAgentAction(
+      userId,
+      'resume_tailor',
+      'tailor_resume',
+      { resumeId },
+      null,
+      'failed',
+      error.message
+    ).catch(err => console.error('Error logging action:', err));
+
+    res.status(500).json({
+      error: 'Failed to tailor resume',
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   generateCoverLetterHandler,
   getCoverLettersHandler,
@@ -1070,4 +1361,8 @@ module.exports = {
   getUnreadAlertsHandler,
   dismissAlertHandler,
   applyFromAlertHandler,
+  uploadResumeHandler,
+  listResumesHandler,
+  analyzeResumeHandler,
+  tailorResumeHandler,
 };

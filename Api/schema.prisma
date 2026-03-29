@@ -27,6 +27,9 @@ model User {
   followUps          FollowUp[]
   preferences        UserPreferences?
   jobAlerts          JobAlert[]
+  userResumes        UserResume[]
+  resumeAnalyses     ResumeAnalysis[]
+  resumeTailors      ResumeTailorLog[]
 }
 
 model Application {
@@ -187,4 +190,75 @@ model JobAlert {
   @@index([userId, seen])
   @@index([jobId])
   @@unique([userId, jobId]) // Prevent duplicate alerts
+}
+
+model UserResume {
+  id         Int      @id @default(autoincrement())
+  userId     String
+  user       User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+
+  // File info
+  fileName   String
+  fileType   String   // "pdf" | "docx"
+  filePath   String   @db.LongText
+  fileSize   Int      // in bytes
+
+  // Extracted content
+  rawText    String   @db.LongText
+
+  // Metadata
+  uploadedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  analyses   ResumeAnalysis[]
+  tailors    ResumeTailorLog[]
+
+  @@index([userId])
+  @@index([uploadedAt])
+}
+
+model ResumeAnalysis {
+  id         Int      @id @default(autoincrement())
+  userId     String
+  user       User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+  resumeId   Int
+  resume     UserResume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  // Analysis results
+  atsScore   Int      // 0-100
+  keywords   Json     // { missing: [], present: [], suggested: [] }
+  sections   Json     // { education: { feedback, score }, experience: {...}, skills: {...} }
+  suggestions Json    // [{ type, description, impact, priority }]
+
+  // Target job (optional)
+  jobDescription String? @db.LongText
+  jobTitle   String?
+
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([resumeId])
+}
+
+model ResumeTailorLog {
+  id         Int      @id @default(autoincrement())
+  userId     String
+  user       User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+  resumeId   Int
+  resume     UserResume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  jobId      String?  // JSearch job_id (optional, for quick-apply)
+  jobTitle   String
+  jobDescription String @db.LongText
+
+  // Generated content
+  tailoredContent String @db.LongText // Modified resume text
+  changes    Json     // Track what was changed
+
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([resumeId])
+  @@index([jobId])
 }

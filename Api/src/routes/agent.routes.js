@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const agentController = require('../controllers/agent.controller');
 const requireAuth = require('../middleware/requireAuth');
+const { uploadMiddleware } = require('../middleware/uploadMiddleware');
 
 const router = Router();
 
@@ -32,5 +33,11 @@ router.get('/alerts', requireAuth, agentController.getAlertsHandler);
 router.get('/alerts/unread', requireAuth, agentController.getUnreadAlertsHandler);
 router.post('/alerts/:id/dismiss', requireAuth, agentController.dismissAlertHandler);
 router.post('/alerts/:id/apply', requireAuth, agentController.applyFromAlertHandler);
+
+// Resume routes
+router.post('/resume/upload', requireAuth, uploadMiddleware, agentController.uploadResumeHandler);
+router.get('/resumes', requireAuth, agentController.listResumesHandler);
+router.post('/resume/analyze', requireAuth, agentController.analyzeResumeHandler);
+router.post('/resume/tailor', requireAuth, agentController.tailorResumeHandler);
 
 module.exports = router;

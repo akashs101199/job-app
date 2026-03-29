@@ -1,2 +1,8 @@
 node_modules/
 .env
+
+# Upload directories
+uploads/
+*.pdf
+*.docx
+*.tmp
