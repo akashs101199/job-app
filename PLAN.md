@@ -489,57 +489,148 @@ model GeneratedContent {
 - Dashboard load: < 2 seconds
 - Database queries optimized
 
-**Ready for:** Phase 6 - Smart Job Alerts Agent
+**Status:** COMPLETE ✅
 
 ---
 
-## Phase 6: Smart Job Alerts Agent
+## Phase 6: Smart Job Alerts Agent ✅
 
 > **Goal:** Proactively discover and surface new job postings matching user preferences without manual search.
 
-### Implementation
+**Status:** COMPLETE (March 29, 2025)
 
-#### Backend
+### Implementation ✅
 
-- [ ] Background agent on configurable schedule (realtime / daily / weekly)
-- [ ] Workflow:
+#### Backend ✅
+
+- [x] Preference inference service analyzes application history for smart defaults
+- [x] Manual alert generation via "Check for Alerts" button (background scheduling deferred to Phase 7)
+- [x] Workflow implemented:
   1. Load `UserPreferences` for each active user
   2. Query JSearch API with saved search criteria
   3. Deduplicate against existing `Application` records (already applied)
   4. Score each new job using the Matching Agent (Phase 2)
   5. Filter by minimum match threshold (configurable, default 60%)
-  6. Save alerts to new `JobAlert` model
-  7. Send notification (in-app + optional email)
+  6. Save alerts to new `JobAlert` model with unique constraint per user+job
+  7. In-app notification via unread badge
 
-- [ ] `GET /api/agent/alerts` — fetch unread alerts
-- [ ] `POST /api/agent/alerts/:id/apply` — quick-apply from alert
-- [ ] `POST /api/agent/alerts/:id/dismiss` — dismiss alert
+- [x] `POST /api/agent/preferences/initialize` — initialize from application history
+- [x] `GET /api/agent/preferences` — fetch user preferences
+- [x] `PUT /api/agent/preferences` — update preferences
+- [x] `POST /api/agent/alerts/check` — manual trigger for alert generation
+- [x] `GET /api/agent/alerts` — fetch alerts with filtering/sorting
+- [x] `GET /api/agent/alerts/unread` — fetch unread alerts for bell icon
+- [x] `POST /api/agent/alerts/:id/dismiss` — dismiss alert
+- [x] `POST /api/agent/alerts/:id/apply` — quick-apply from alert, creates Application record
 
-#### Database Addition
+**Services Created:**
+- `Api/src/services/ai/preferenceInference.service.js` — Extract preferences from job history
+- `Api/src/services/preferences.service.js` — Manage user preferences (CRUD)
+- `Api/src/services/ai/jobAlerts.service.js` — Alert generation and management
+
+#### Database ✅
 
 ```prisma
+model UserPreferences {
+  userId           String   @id
+  user             User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+  preferredRoles   Json
+  preferredLocations Json
+  salaryMin        Int?
+  salaryMax        Int?
+  remoteOnly       Boolean  @default(false)
+  platforms        Json
+  alertFrequency   String   @default("manual")
+  matchThreshold   Int      @default(60)
+  maxAlertsPerCheck Int     @default(10)
+  autoApplyEnabled Boolean  @default(false)
+  lastInitialized  DateTime @default(now())
+  lastModified     DateTime @updatedAt
+}
+
 model JobAlert {
   id          Int      @id @default(autoincrement())
   userId      String
-  user        User     @relation(fields: [userId], references: [email])
+  user        User     @relation(fields: [userId], references: [email], onDelete: Cascade)
   jobId       String
   jobTitle    String
   companyName String
   matchScore  Int
   jobLink     String   @db.LongText
+  location    String?
+  salary      String?
   platform    String
   seen        Boolean  @default(false)
   dismissed   Boolean  @default(false)
+  applied     Boolean  @default(false)
   createdAt   DateTime @default(now())
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([userId, seen])
 }
 ```
 
-#### Frontend
+#### Frontend ✅
 
-- [ ] Alert bell icon in `TopNav.js` with unread count
-- [ ] Alert dropdown/page showing matched jobs with scores
-- [ ] One-click apply from alert
-- [ ] Preference configuration page linked from dashboard
+- [x] Preferences page at `/joblist/preferences`
+  - Form with job preferences, work style, platform selection, alert settings
+  - "Initialize from History" button for smart defaults
+  - Add/remove roles and locations with suggestion buttons
+  - Salary range, remote preference, alert frequency, match threshold configuration
+
+- [x] Alerts Center page at `/joblist/alerts`
+  - Full alert management interface
+  - Stats cards: unread, total, applied
+  - Filter by status: all, unread, dismissed
+  - Sort by: newest, match score, company
+  - Manual "Check for Alerts" button
+
+- [x] AlertCard component
+  - Match score badge with color coding (green 80+, yellow 60-79, red <60)
+  - Job title, company, location, salary
+  - Platform badge
+  - Quick action buttons: Apply, Dismiss, View Job
+  - Status badges: Unread, Seen, Applied, Dismissed
+
+- [x] Alert bell icon in TopNav
+  - 🔔 with animated unread badge
+  - Dropdown showing 3 most recent unread alerts
+  - Real-time refresh every 30 seconds
+  - "See All Alerts" link to full Alerts page
+
+- [x] AlertWidget on Dashboard
+  - Shows unread count and recent alerts
+  - Quick navigation to Alerts page
+
+**Frontend Services Created:**
+- `client/src/services/preferences.service.js` — API client for preferences
+- `client/src/services/jobAlert.service.js` — API client for alerts + formatting helpers
+
+#### Pages & Components ✅
+- `client/src/pages/Preferences/` — Preferences configuration page + CSS
+- `client/src/pages/Alerts/` — Alerts center page + CSS
+- `client/src/pages/Alerts/components/AlertCard.js` — Alert card component + CSS
+- `client/src/components/dashboard/AlertWidget.js` — Dashboard widget + CSS
+- `client/src/components/layout/TopNav.css` — Bell icon styling
+
+#### Routing ✅
+- Added endpoints to `config/api.js`
+- Updated `client/src/index.js` with routes:
+  - `GET /joblist/preferences` → Preferences page
+  - `GET /joblist/alerts` → Alerts Center page
+
+### Key Features
+
+✅ **Smart Preference Inference** — AI analyzes application history to suggest preferred roles, locations, platforms
+✅ **Manual Alert Generation** — "Check for Alerts" button for on-demand job matching
+✅ **Deduplication** — Unique constraint prevents duplicate alerts; filters already-applied jobs
+✅ **Match Scoring** — Reuses existing matching algorithm from Phase 2 (0-100 scale)
+✅ **Quick Actions** — Apply, dismiss, view job directly from alerts
+✅ **Real-time Badge** — Unread count with animated pulsing notification
+✅ **Full UI Integration** — Bell icon, Alert Center, Dashboard widget, responsive design
+✅ **Extensible for Scheduling** — Phase 7 can wrap `generateAlertsForUser()` in node-cron without service changes
+
+**Ready for:** Phase 7 - Resume Optimization Agent + Background Scheduling
 
 ---
 

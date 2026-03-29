@@ -14,6 +14,18 @@ const {
   updateFollowUpEmail,
   markFollowUpAsSent,
 } = require('../services/ai/followUp.service');
+const {
+  initializePreferences,
+  getPreferences,
+  updatePreferences,
+} = require('../services/preferences.service');
+const {
+  generateAlertsForUser,
+  getUnreadAlerts,
+  getAlerts,
+  dismissAlert,
+  applyFromAlert,
+} = require('../services/ai/jobAlerts.service');
 
 const generateCoverLetterHandler = async (req, res) => {
   const { jobId, jobTitle, companyName, jobDescription, jobHighlights } = req.body;
@@ -800,6 +812,239 @@ const sendFollowUpHandler = async (req, res) => {
   }
 };
 
+// Preference Handlers
+
+const initializePreferencesHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const preferences = await initializePreferences(userId);
+
+    await logAgentAction(
+      userId,
+      'job_alerts',
+      'initialize_preferences',
+      {},
+      {
+        preferencesCreated: true,
+        roles: preferences.preferredRoles,
+        locations: preferences.preferredLocations,
+      },
+      'success'
+    ).catch(err => console.error('Error logging action:', err));
+
+    res.json({
+      success: true,
+      data: preferences,
+    });
+  } catch (error) {
+    console.error('Error initializing preferences:', error);
+    res.status(500).json({
+      error: 'Failed to initialize preferences',
+      message: error.message,
+    });
+  }
+};
+
+const getPreferencesHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const preferences = await getPreferences(userId);
+
+    if (!preferences) {
+      return res.status(404).json({
+        error: 'Preferences not found',
+        message: 'Please initialize preferences first',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: preferences,
+    });
+  } catch (error) {
+    console.error('Error fetching preferences:', error);
+    res.status(500).json({
+      error: 'Failed to fetch preferences',
+      message: error.message,
+    });
+  }
+};
+
+const updatePreferencesHandler = async (req, res) => {
+  const userId = req.user?.email;
+  const updates = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const preferences = await updatePreferences(userId, updates);
+
+    await logAgentAction(
+      userId,
+      'job_alerts',
+      'update_preferences',
+      updates,
+      { preferencesUpdated: true },
+      'success'
+    ).catch(err => console.error('Error logging action:', err));
+
+    res.json({
+      success: true,
+      data: preferences,
+    });
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    res.status(500).json({
+      error: 'Failed to update preferences',
+      message: error.message,
+    });
+  }
+};
+
+// Alert Handlers
+
+const checkAlertsHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const alerts = await generateAlertsForUser(userId);
+
+    res.json({
+      success: true,
+      data: alerts,
+      message: `Generated ${alerts.length} new job alerts`,
+    });
+  } catch (error) {
+    console.error('Error checking alerts:', error);
+    res.status(500).json({
+      error: 'Failed to check for alerts',
+      message: error.message,
+    });
+  }
+};
+
+const getAlertsHandler = async (req, res) => {
+  const userId = req.user?.email;
+  const { status = 'all', sortBy = 'newest' } = req.query;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const alerts = await getAlerts(userId, { status, sortBy });
+
+    res.json({
+      success: true,
+      data: alerts,
+    });
+  } catch (error) {
+    console.error('Error fetching alerts:', error);
+    res.status(500).json({
+      error: 'Failed to fetch alerts',
+      message: error.message,
+    });
+  }
+};
+
+const getUnreadAlertsHandler = async (req, res) => {
+  const userId = req.user?.email;
+  const limit = parseInt(req.query.limit || '3');
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const alerts = await getUnreadAlerts(userId, limit);
+
+    res.json({
+      success: true,
+      data: alerts,
+      unreadCount: alerts.length,
+    });
+  } catch (error) {
+    console.error('Error fetching unread alerts:', error);
+    res.status(500).json({
+      error: 'Failed to fetch unread alerts',
+      message: error.message,
+    });
+  }
+};
+
+const dismissAlertHandler = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!id) {
+    return res.status(400).json({ error: 'Alert ID is required' });
+  }
+
+  try {
+    const alert = await dismissAlert(parseInt(id), userId);
+
+    res.json({
+      success: true,
+      data: alert,
+    });
+  } catch (error) {
+    console.error('Error dismissing alert:', error);
+    res.status(500).json({
+      error: 'Failed to dismiss alert',
+      message: error.message,
+    });
+  }
+};
+
+const applyFromAlertHandler = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!id) {
+    return res.status(400).json({ error: 'Alert ID is required' });
+  }
+
+  try {
+    const application = await applyFromAlert(parseInt(id), userId);
+
+    res.json({
+      success: true,
+      data: application,
+      message: 'Application created from alert',
+    });
+  } catch (error) {
+    console.error('Error applying from alert:', error);
+    res.status(500).json({
+      error: 'Failed to create application',
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   generateCoverLetterHandler,
   getCoverLettersHandler,
@@ -817,4 +1062,12 @@ module.exports = {
   dismissFollowUpHandler,
   editFollowUpHandler,
   sendFollowUpHandler,
+  initializePreferencesHandler,
+  getPreferencesHandler,
+  updatePreferencesHandler,
+  checkAlertsHandler,
+  getAlertsHandler,
+  getUnreadAlertsHandler,
+  dismissAlertHandler,
+  applyFromAlertHandler,
 };

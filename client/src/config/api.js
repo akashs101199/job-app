@@ -23,6 +23,11 @@ const ENDPOINTS = {
   AGENT_FOLLOW_UPS: `${API_BASE_URL}/agent/follow-ups`,
   AGENT_STALE_APPLICATIONS: `${API_BASE_URL}/agent/stale-applications`,
   AGENT_GENERATE_FOLLOW_UPS: `${API_BASE_URL}/agent/follow-ups/generate`,
+  PREFERENCES_INITIALIZE: `${API_BASE_URL}/agent/preferences/initialize`,
+  PREFERENCES: `${API_BASE_URL}/agent/preferences`,
+  AGENT_ALERTS: `${API_BASE_URL}/agent/alerts`,
+  AGENT_ALERTS_CHECK: `${API_BASE_URL}/agent/alerts/check`,
+  AGENT_ALERTS_UNREAD: `${API_BASE_URL}/agent/alerts/unread`,
 };
 
 export { API_BASE_URL, ENDPOINTS };

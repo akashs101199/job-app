@@ -25,6 +25,8 @@ model User {
   generatedContent   GeneratedContent[]
   agentLogs          AgentLog[]
   followUps          FollowUp[]
+  preferences        UserPreferences?
+  jobAlerts          JobAlert[]
 }
 
 model Application {
@@ -132,4 +134,57 @@ model FollowUp {
 
   @@index([userId])
   @@index([status])
+}
+
+model UserPreferences {
+  userId           String   @id
+  user             User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+
+  // Search criteria
+  preferredRoles   Json     // ["Software Engineer", "Full Stack Developer"]
+  preferredLocations Json   // ["Remote", "San Francisco, CA"]
+  salaryMin        Int?
+  salaryMax        Int?
+  remoteOnly       Boolean  @default(false)
+
+  // Platform and alert settings
+  platforms        Json     // ["LinkedIn", "Indeed", "Glassdoor"]
+  alertFrequency   String   @default("manual") // "manual" | "daily" | "weekly"
+  matchThreshold   Int      @default(60) // 0-100
+  maxAlertsPerCheck Int     @default(10)
+  autoApplyEnabled Boolean  @default(false)
+
+  // Timestamps
+  lastInitialized  DateTime @default(now())
+  lastModified     DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model JobAlert {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  user        User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+
+  // Job details
+  jobId       String   // JSearch job_id for deduplication
+  jobTitle    String
+  companyName String
+  matchScore  Int      // 0-100 from matching.service.js
+  jobLink     String   @db.LongText
+  location    String?
+  salary      String?
+  platform    String
+
+  // Alert state
+  seen        Boolean  @default(false)
+  dismissed   Boolean  @default(false)
+  applied     Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, seen])
+  @@index([jobId])
+  @@unique([userId, jobId]) // Prevent duplicate alerts
 }

@@ -19,6 +19,8 @@ import Analytics from './pages/Analytics/Analytics';
 import PerformanceDetails from './pages/Analytics/PerformanceDetails';
 import MarketTrendsDetails from './pages/Analytics/MarketTrendsDetails';
 import FollowUpQueue from './pages/FollowUpQueue/FollowUpQueue';
+import Preferences from './pages/Preferences/Preferences';
+import Alerts from './pages/Alerts/Alerts';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -42,6 +44,8 @@ root.render(
           <Route path="performance-details" element={<PerformanceDetails />} />
           <Route path="market-trends-details" element={<MarketTrendsDetails />} />
           <Route path="follow-ups" element={<FollowUpQueue />} />
+          <Route path="preferences" element={<Preferences />} />
+          <Route path="alerts" element={<Alerts />} />
         </Route>
       </Routes>
     </BrowserRouter>

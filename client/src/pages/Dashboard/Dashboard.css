@@ -411,3 +411,15 @@ body {
       font-size: 0.95rem;
     }
   }
+
+/* Dashboard Widgets Section */
+.dashboard-widgets-section {
+  margin-top: 3rem;
+  padding: 0 2rem;
+}
+
+@media (max-width: 768px) {
+  .dashboard-widgets-section {
+    padding: 0 1rem;
+  }
+}

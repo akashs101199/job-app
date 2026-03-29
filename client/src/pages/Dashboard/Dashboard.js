@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthUser } from '../../context/AuthContext';
+import AlertWidget from '../../components/dashboard/AlertWidget';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -110,6 +111,10 @@ const Dashboard = () => {
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="dashboard-widgets-section">
+          <AlertWidget />
         </div>
       </div>
     </div>

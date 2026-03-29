@@ -21,4 +21,16 @@ router.post('/follow-ups/:id/dismiss', requireAuth, agentController.dismissFollo
 router.patch('/follow-ups/:id', requireAuth, agentController.editFollowUpHandler);
 router.post('/follow-ups/:id/send', requireAuth, agentController.sendFollowUpHandler);
 
+// Preferences routes
+router.post('/preferences/initialize', requireAuth, agentController.initializePreferencesHandler);
+router.get('/preferences', requireAuth, agentController.getPreferencesHandler);
+router.put('/preferences', requireAuth, agentController.updatePreferencesHandler);
+
+// Alerts routes
+router.post('/alerts/check', requireAuth, agentController.checkAlertsHandler);
+router.get('/alerts', requireAuth, agentController.getAlertsHandler);
+router.get('/alerts/unread', requireAuth, agentController.getUnreadAlertsHandler);
+router.post('/alerts/:id/dismiss', requireAuth, agentController.dismissAlertHandler);
+router.post('/alerts/:id/apply', requireAuth, agentController.applyFromAlertHandler);
+
 module.exports = router;
