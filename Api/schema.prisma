@@ -30,6 +30,9 @@ model User {
   userResumes        UserResume[]
   resumeAnalyses     ResumeAnalysis[]
   resumeTailors      ResumeTailorLog[]
+  autoApplyConfig    AutoApplyConfig?
+  autoApplyQueue     AutoApplyQueue[]
+  autoApplyLogs      AutoApplyLog[]
 }
 
 model Application {
@@ -261,4 +264,80 @@ model ResumeTailorLog {
   @@index([userId])
   @@index([resumeId])
   @@index([jobId])
+}
+
+model AutoApplyConfig {
+  userId              String   @id
+  user                User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+
+  // Targeting
+  preferredRoles      Json     // ["Software Engineer", "Full Stack Developer"]
+  preferredLocations  Json     // ["Remote", "San Francisco"]
+  minMatchScore       Int      @default(70) // Only apply to jobs scoring 70+
+  maxApplicationsPerDay Int    @default(5)
+
+  // Approval modes
+  approvalMode        String   @default("manual") // "manual" | "threshold" | "automatic"
+  autoApplyThreshold  Int      @default(85) // Auto-apply jobs scoring 85+
+
+  // Settings
+  enabled             Boolean  @default(false)
+  notifyOnQueue       Boolean  @default(true)
+  notifyOnApply       Boolean  @default(true)
+
+  // Timestamps
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model AutoApplyQueue {
+  id                  Int      @id @default(autoincrement())
+  userId              String
+  user                User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+
+  // Job details
+  jobId               String   // JSearch job ID
+  jobTitle            String
+  companyName         String
+  jobLink             String   @db.LongText
+  matchScore          Int      // 0-100 from matching
+
+  // Generated content
+  coverLetter         String   @db.LongText
+  resumeContent       String   @db.LongText
+  tailorSummary       String?  // Summary of resume changes
+
+  // Status
+  status              String   @default("pending") // "pending" | "approved" | "rejected" | "applied" | "failed"
+  approvedAt          DateTime?
+  appliedAt           DateTime?
+  rejectionReason     String?
+
+  // For tracking
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([jobId])
+  @@unique([userId, jobId]) // Prevent duplicate queue entries
+}
+
+model AutoApplyLog {
+  id                  Int      @id @default(autoincrement())
+  userId              String
+  user                User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+
+  action              String   // "discovery" | "evaluation" | "content_gen" | "queue_created" | "approved" | "applied" | "failed"
+  jobId               String?
+  jobTitle            String?
+  status              String   // "success" | "error" | "skipped"
+  details             Json?    // { reason: "...", matchScore: 75, etc }
+
+  createdAt           DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, action])
 }
