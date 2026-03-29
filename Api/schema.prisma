@@ -33,6 +33,8 @@ model User {
   autoApplyConfig    AutoApplyConfig?
   autoApplyQueue     AutoApplyQueue[]
   autoApplyLogs      AutoApplyLog[]
+  schedulerConfig    SchedulerConfig?
+  cronLogs           CronLog[]
 }
 
 model Application {
@@ -340,4 +342,56 @@ model AutoApplyLog {
 
   @@index([userId])
   @@index([userId, action])
+}
+
+model SchedulerConfig {
+  userId                String   @id
+  user                  User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+
+  // Alert check schedule
+  alertCheckEnabled     Boolean  @default(true)
+  alertCheckFrequency   String   @default("daily") // "hourly" | "daily" | "weekly"
+  alertCheckTime        String   @default("09:00") // HH:mm format
+
+  // Auto-apply schedule
+  autoApplyEnabled      Boolean  @default(false)
+  autoApplyFrequency    String   @default("daily")
+  autoApplyTime         String   @default("12:00")
+
+  // Email digest
+  emailDigestEnabled    Boolean  @default(true)
+  emailDigestFrequency  String   @default("daily") // "daily" | "weekly"
+  emailDigestTime       String   @default("18:00")
+
+  // Timezone for scheduling
+  timezone              String   @default("America/New_York") // IANA timezone
+
+  // Track last execution
+  lastAlertCheckAt      DateTime?
+  lastAutoApplyAt       DateTime?
+  lastEmailDigestAt     DateTime?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model CronLog {
+  id                    Int      @id @default(autoincrement())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [email], onDelete: Cascade)
+
+  jobType               String   // "alert_check" | "auto_apply" | "email_digest"
+  scheduledFor          DateTime // When job was scheduled to run
+  executedAt            DateTime // When job actually ran
+  status                String   // "success" | "failure" | "skipped"
+  message               String?  @db.LongText // Job output/error message
+  result                Json?    // { jobsFound: 5, queued: 3, errors: [] }
+
+  createdAt             DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, jobType])
+  @@index([executedAt])
 }
