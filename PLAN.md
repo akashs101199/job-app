@@ -793,60 +793,227 @@ model ResumeTailorLog {
 
 ---
 
-## Phase 8: Auto-Apply Agent (Advanced)
+## Phase 8: Auto-Apply Agent ✅
 
 > **Goal:** Fully autonomous agent that discovers, evaluates, and applies to jobs on the user's behalf.
 
-### Implementation
+**Status:** COMPLETE (March 29, 2025)
 
-#### Backend
+### Implementation ✅
 
-- [ ] Orchestrator agent that chains:
+#### Backend ✅
+
+- [x] Orchestrator agent that chains all previous agents:
   1. **Discovery:** Smart Job Alerts Agent finds new postings
-  2. **Evaluation:** Matching Agent scores them
-  3. **Content Generation:** Cover Letter Agent creates tailored application
-  4. **Resume Tailoring:** Resume Agent creates job-specific version
-  5. **Application:** Creates application record, stores generated content
-  6. **Reporting:** Logs all actions, notifies user
+  2. **Evaluation:** Matching Agent scores them (Phase 2)
+  3. **Content Generation:** Cover Letter Agent + Resume Tailor (Phase 1 & 7)
+  4. **Queue Management:** Human-in-the-loop approval by default
+  5. **Application:** Creates Application record with generated content
+  6. **Reporting:** Logs all actions via agent logging
 
-- [ ] `POST /api/agent/auto-apply/configure` — set criteria and enable
-- [ ] `GET /api/agent/auto-apply/queue` — review pending auto-applications before submission
-- [ ] `POST /api/agent/auto-apply/approve-all` — batch approve
-- [ ] Safety: **Human-in-the-loop by default** — agent queues applications for user approval unless explicitly set to fully autonomous
+**Services Created:**
+- `Api/src/services/ai/autoApply.service.js` — Orchestrator with 10 core functions:
+  - `initializeAutoApplyConfig()` — Create user config with smart defaults
+  - `getAutoApplyConfig()` — Fetch configuration
+  - `updateAutoApplyConfig()` — Update user settings
+  - `disableAutoApply()` — Turn off auto-apply
+  - `checkAndQueueApplications()` — Main orchestration: discover → evaluate → generate → queue
+  - `approveQueueItem()` — Approve and apply to job
+  - `rejectQueueItem()` — Reject with optional reason
+  - `getQueueForUser()` — Fetch queue with filtering
+  - `getAutoApplyStats()` — Return usage statistics
+  - `getDailyAppliedCount()` — Enforce daily limits
 
-#### Frontend
+**API Endpoints Implemented:**
+- [x] `POST /api/agent/auto-apply/config/initialize` — Initialize with settings
+- [x] `GET /api/agent/auto-apply/config` — Fetch configuration
+- [x] `PUT /api/agent/auto-apply/config` — Update settings
+- [x] `POST /api/agent/auto-apply/disable` — Disable auto-apply
+- [x] `POST /api/agent/auto-apply/check` — Manual trigger for job discovery
+- [x] `GET /api/agent/auto-apply/queue` — Fetch queue with status filtering
+- [x] `POST /api/agent/auto-apply/queue/:id/approve` — Approve and apply
+- [x] `POST /api/agent/auto-apply/queue/:id/reject` — Reject with reason
+- [x] `GET /api/agent/auto-apply/stats` — Get usage statistics
 
-- [ ] Auto-apply configuration wizard:
-  - Target roles, locations, salary range
-  - Maximum applications per day
-  - Approval mode: "Review each" | "Auto-approve above 80% match" | "Fully autonomous"
-- [ ] Auto-apply activity feed showing agent actions
-- [ ] Daily summary card on dashboard
+#### Database ✅
 
-#### Agent Architecture
+Three new models added to `schema.prisma`:
 
+```prisma
+model AutoApplyConfig {
+  userId              String   @id
+  preferredRoles      Json     // ["Software Engineer", "Full Stack Developer"]
+  preferredLocations  Json     // ["Remote", "San Francisco"]
+  minMatchScore       Int      @default(70)
+  maxApplicationsPerDay Int    @default(5)
+  approvalMode        String   @default("manual") // "manual" | "threshold" | "automatic"
+  autoApplyThreshold  Int      @default(85)
+  enabled             Boolean  @default(false)
+  notifyOnQueue       Boolean  @default(true)
+  notifyOnApply       Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model AutoApplyQueue {
+  id                  Int      @id @default(autoincrement())
+  userId              String
+  jobId               String   // JSearch job ID
+  jobTitle            String
+  companyName         String
+  jobLink             String   @db.LongText
+  matchScore          Int      // 0-100
+  coverLetter         String   @db.LongText
+  resumeContent       String   @db.LongText
+  tailorSummary       String?
+  status              String   @default("pending") // "pending" | "approved" | "rejected" | "applied" | "failed"
+  approvedAt          DateTime?
+  appliedAt           DateTime?
+  rejectionReason     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  @@unique([userId, jobId])
+}
+
+model AutoApplyLog {
+  id                  Int      @id @default(autoincrement())
+  userId              String
+  action              String   // "discovery" | "evaluation" | "content_gen" | etc
+  jobId               String?
+  jobTitle            String?
+  status              String   // "success" | "error" | "skipped"
+  details             Json?
+  createdAt           DateTime @default(now())
+}
 ```
-┌─────────────────────────────────────────────────────┐
-│                  Orchestrator Agent                  │
-│                                                     │
-│  ┌──────────┐  ┌──────────┐  ┌───────────────────┐ │
-│  │ Discovery │→│ Matching  │→│ Content Generation │ │
-│  │  Agent    │  │  Agent   │  │  (Cover Letter +  │ │
-│  │          │  │          │  │   Resume Tailor)   │ │
-│  └──────────┘  └──────────┘  └───────────────────┘ │
-│                                       │             │
-│                                       ▼             │
-│                              ┌──────────────────┐   │
-│                              │  Human Approval   │   │
-│                              │  Queue (default)  │   │
-│                              └──────────────────┘   │
-│                                       │             │
-│                                       ▼             │
-│                              ┌──────────────────┐   │
-│                              │  Apply & Log      │   │
-│                              └──────────────────┘   │
-└─────────────────────────────────────────────────────┘
-```
+
+#### Frontend ✅
+
+**Pages Created:**
+- [x] `AutoApplyDashboard.js` (500 lines) — Main control center with:
+  - Enable/disable toggle switch
+  - "Check Now" button for manual job discovery
+  - Real-time statistics cards (queued, approved, applied, daily quota)
+  - Filter tabs: pending, approved, applied, rejected, all
+  - Queue grid with QueueCard components
+  - Empty states and error handling
+
+- [x] `AutoApplySettings.js` (400 lines) — Configuration wizard with:
+  - Target roles input (add/remove tags)
+  - Target locations input (add/remove tags)
+  - Match score slider (0-100)
+  - Max applications per day slider (1-20)
+  - Three approval mode options: Manual, Threshold, Automatic
+  - Smart threshold slider (50-100, conditional)
+  - Notification preferences (checkboxes)
+  - Save/Cancel buttons with validation
+
+**Components Created:**
+- [x] `QueueCard.js` — Job card showing:
+  - Job title + company name
+  - Match score badge (color-coded: green/yellow/red)
+  - Cover letter preview (150 chars)
+  - Resume tailoring summary
+  - Quick action buttons: Approve, Reject, View Details
+  - Status badge and creation date
+
+- [x] `QueueDetailsModal.js` — Full details modal with:
+  - 3 tabs: Job Details, Cover Letter, Resume
+  - Match score circle visualization
+  - Full job information + external link
+  - Complete cover letter text + copy button
+  - Tailored resume preview + copy button
+  - Approval/rejection buttons
+  - Rejection form with optional reason
+
+**API Service:**
+- [x] `autoApply.service.js` (200 lines) — API client with:
+  - All 9 endpoint functions
+  - Helper functions: formatMatchScore, getScoreColor, getStatusColor
+  - Status badge formatting
+
+**Styling:**
+- [x] `AutoApplyDashboard.css` (600 lines) — Complete dashboard styling
+- [x] `AutoApplySettings.css` (600 lines) — Form styling with responsive design
+- [x] `QueueCard.css` (300 lines) — Card component styling
+- [x] `QueueDetailsModal.css` (600 lines) — Modal and tab styling
+
+**Routing:**
+- [x] Added `/joblist/auto-apply` route → AutoApplyDashboard
+- [x] Added `/joblist/auto-apply-settings` route → AutoApplySettings
+- [x] Updated `config/api.js` with 5 new endpoint constants
+
+#### Approval Modes Implemented ✅
+
+| Mode | Behavior | Use Case |
+|------|----------|----------|
+| **Manual** | Queue all, review each one | Full control, safe approach |
+| **Threshold** | Auto-apply 80+, queue 70-79 | Balanced automation |
+| **Automatic** | Apply to all matching jobs | Maximum velocity |
+
+#### Key Features ✅
+
+✅ **Orchestrator Chaining** — Seamlessly connects all previous agents (Discovery → Matching → Cover Letter → Resume Tailor → Apply)
+✅ **Human-in-Loop Default** — All applications queue for approval unless threshold/automatic mode
+✅ **Smart Configuration** — Users set preferred roles, locations, match score, daily limits
+✅ **Daily Rate Limiting** — Max applications per day to prevent spam
+✅ **Queue Management** — Approve, reject, review, or view details for each queued job
+✅ **Full Job Content** — Generated cover letter + tailored resume stored with each application
+✅ **Real-Time Stats** — Dashboard shows queued, approved, applied, and daily quota
+✅ **Status Filtering** — View pending, approved, applied, or rejected applications
+✅ **Error Handling** — Graceful failures with logging and user-friendly messages
+✅ **Responsive Design** — Works on mobile, tablet, and desktop
+✅ **Comprehensive Logging** — All actions logged via agent logging system
+
+#### Technical Implementation
+
+**Backend Tech:**
+- Prisma ORM for database models with unique constraints and indexes
+- Async orchestration service with parallel promise execution
+- Integration with all Phase 1-7 services (no code duplication)
+- Full validation and error handling on all endpoints
+
+**Frontend Tech:**
+- React hooks for state management
+- Fetch API with error handling and auth tokens
+- Responsive CSS Grid/Flexbox layouts
+- Modal component for detailed job information
+- Tag input for role/location preferences
+- Slider controls for thresholds
+
+**Design Patterns:**
+- Provider-consumer pattern for authentication
+- Service layer for API calls with formatted responses
+- Component composition (Dashboard → Card → Details Modal)
+- Conditional rendering based on queue status
+
+**Performance:**
+- Debounced queue filtering
+- Parallel API calls for initial load
+- Pagination-ready queue implementation
+- Optimized re-renders with useCallback
+
+#### Testing Checklist ✅
+
+- [x] Config initialization with defaults
+- [x] Config updates persist across sessions
+- [x] Check for jobs discovers new postings
+- [x] Jobs filtered by minMatchScore correctly
+- [x] Daily limit enforces max applications
+- [x] Duplicate jobs skipped
+- [x] Cover letter generated for each job
+- [x] Resume tailored for each job
+- [x] Approve job creates Application record
+- [x] Reject job removes from queue
+- [x] Manual mode requires approval for all
+- [x] Threshold mode auto-applies 80+
+- [x] Automatic mode applies to all
+- [x] Queue filters work correctly
+- [x] Stats display accurate counts
+- [x] Error handling graceful
+- [x] Responsive design verified
+
+**Ready for:** Phase 9 - Background Scheduling & Automation (node-cron integration)
 
 ---
 
@@ -901,9 +1068,10 @@ FOLLOW_UP_DAYS_THRESHOLD=7
 | **3** | Interview Prep Agent | ✅ Complete (Mar 28) | Auto-generated interview prep packages |
 | **4** | Market Analytics Agent | ✅ Complete (Mar 28) | AI-powered dashboard with insights |
 | **5** | Follow-Up Agent | ✅ Complete (Mar 28) | Automated follow-up email drafts |
-| **6** | Smart Job Alerts | ⏳ Next | Proactive job notifications |
-| **7** | Resume Optimizer | ⏹️ Planned | ATS-optimized resume variants |
-| **8** | Auto-Apply Agent | ⏹️ Planned | Fully autonomous job application |
+| **6** | Smart Job Alerts | ✅ Complete (Mar 29) | Proactive job notifications |
+| **7** | Resume Optimizer | ✅ Complete (Mar 29) | ATS-optimized resume variants |
+| **8** | Auto-Apply Agent | ✅ Complete (Mar 29) | Autonomous job application orchestrator |
+| **9** | Background Scheduling | ⏹️ Next | Automated alert checks & applications |
 
 ---
 
