@@ -54,6 +54,7 @@ const {
   getQueueForUser,
   getAutoApplyStats,
 } = require('../services/ai/autoApply.service');
+const { getScheduler } = require('../services/scheduler/scheduler.service');
 const fs = require('fs');
 
 const generateCoverLetterHandler = async (req, res) => {
@@ -1587,6 +1588,117 @@ const getAutoApplyStatsHandler = async (req, res) => {
   }
 };
 
+// ============================================================================
+// SCHEDULER HANDLERS (Phase 9)
+// ============================================================================
+
+const getSchedulerConfigHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const scheduler = getScheduler();
+    const config = await scheduler.getSchedulerConfig(userId);
+
+    res.json({
+      success: true,
+      data: config,
+    });
+  } catch (error) {
+    console.error('Error fetching scheduler config:', error);
+    res.status(500).json({
+      error: 'Failed to fetch scheduler configuration',
+      message: error.message,
+    });
+  }
+};
+
+const updateSchedulerConfigHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const updates = req.body;
+
+  try {
+    const scheduler = getScheduler();
+    const config = await scheduler.updateSchedulerConfig(userId, updates);
+
+    res.json({
+      success: true,
+      data: config,
+      message: 'Scheduler configuration updated successfully',
+    });
+  } catch (error) {
+    console.error('Error updating scheduler config:', error);
+    res.status(500).json({
+      error: 'Failed to update scheduler configuration',
+      message: error.message,
+    });
+  }
+};
+
+const getSchedulerLogsHandler = async (req, res) => {
+  const userId = req.user?.email;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { jobType, limit = 50, offset = 0 } = req.query;
+
+  try {
+    const scheduler = getScheduler();
+    const logs = await scheduler.getCronLogs(userId, jobType || null, parseInt(limit), parseInt(offset));
+
+    res.json({
+      success: true,
+      data: logs,
+    });
+  } catch (error) {
+    console.error('Error fetching scheduler logs:', error);
+    res.status(500).json({
+      error: 'Failed to fetch scheduler logs',
+      message: error.message,
+    });
+  }
+};
+
+const manuallyTriggerJobHandler = async (req, res) => {
+  const userId = req.user?.email;
+  const { jobType } = req.params;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!jobType) {
+    return res.status(400).json({ error: 'jobType parameter is required' });
+  }
+
+  try {
+    const scheduler = getScheduler();
+    const result = await scheduler.manuallyTriggerJob(userId, jobType);
+
+    res.json({
+      success: true,
+      message: `${jobType} job executed successfully`,
+      result,
+    });
+  } catch (error) {
+    console.error(`Error manually triggering ${jobType}:`, error);
+    res.status(500).json({
+      error: `Failed to execute ${jobType} job`,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   generateCoverLetterHandler,
   getCoverLettersHandler,
@@ -1625,4 +1737,8 @@ module.exports = {
   approveQueueItemHandler,
   rejectQueueItemHandler,
   getAutoApplyStatsHandler,
+  getSchedulerConfigHandler,
+  updateSchedulerConfigHandler,
+  getSchedulerLogsHandler,
+  manuallyTriggerJobHandler,
 };

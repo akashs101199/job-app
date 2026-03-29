@@ -37,6 +37,8 @@ const ENDPOINTS = {
   AGENT_AUTO_APPLY_CHECK: `${API_BASE_URL}/agent/auto-apply/check`,
   AGENT_AUTO_APPLY_QUEUE: `${API_BASE_URL}/agent/auto-apply/queue`,
   AGENT_AUTO_APPLY_STATS: `${API_BASE_URL}/agent/auto-apply/stats`,
+  AGENT_SCHEDULER_CONFIG: `${API_BASE_URL}/agent/scheduler/config`,
+  AGENT_SCHEDULER_LOGS: `${API_BASE_URL}/agent/scheduler/logs`,
 };
 
 export { API_BASE_URL, ENDPOINTS };

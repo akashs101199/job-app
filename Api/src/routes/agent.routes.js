@@ -51,4 +51,10 @@ router.post('/auto-apply/queue/:queueId/approve', requireAuth, agentController.a
 router.post('/auto-apply/queue/:queueId/reject', requireAuth, agentController.rejectQueueItemHandler);
 router.get('/auto-apply/stats', requireAuth, agentController.getAutoApplyStatsHandler);
 
+// Scheduler routes (Phase 9)
+router.get('/scheduler/config', requireAuth, agentController.getSchedulerConfigHandler);
+router.put('/scheduler/config', requireAuth, agentController.updateSchedulerConfigHandler);
+router.get('/scheduler/logs', requireAuth, agentController.getSchedulerLogsHandler);
+router.post('/scheduler/job/:jobType/run', requireAuth, agentController.manuallyTriggerJobHandler);
+
 module.exports = router;
