@@ -200,7 +200,10 @@ export async function queueNotification(userId, notificationType, data) {
         notificationType,
         subject: rendered.subject,
         recipients: [user.email],
-        metadata: data,
+        metadata: {
+          ...data,
+          messageId: sendResult.messageId,
+        },
       },
     });
 

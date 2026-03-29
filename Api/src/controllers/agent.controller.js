@@ -1798,9 +1798,43 @@ const getNotificationMetricsHandler = async (req, res) => {
 };
 
 const handleSendGridWebhookHandler = async (req, res) => {
-  // This will be implemented with SendGrid signature verification
-  // For now, just acknowledge receipt
-  res.status(200).send('OK');
+  try {
+    // Parse webhook events (SendGrid sends an array)
+    const events = Array.isArray(req.body) ? req.body : [req.body];
+
+    for (const event of events) {
+      const { event: eventType, sg_message_id } = event;
+
+      if (!sg_message_id) {
+        console.warn('Webhook event missing sg_message_id:', event);
+        continue;
+      }
+
+      // Find EmailLog by message ID stored in metadata
+      const emailLog = await prisma.emailLog.findFirst({
+        where: {
+          metadata: {
+            path: ['messageId'],
+            equals: sg_message_id,
+          },
+        },
+      });
+
+      if (!emailLog) {
+        console.warn(`EmailLog not found for message ID: ${sg_message_id}`);
+        continue;
+      }
+
+      // Update metrics using existing service function
+      await notificationService.updateMetricsFromWebhook(emailLog.id, eventType);
+    }
+
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    // Still return 200 to prevent SendGrid from retrying
+    res.status(200).send('OK');
+  }
 };
 
 const handleUnsubscribeLinkHandler = async (req, res) => {

@@ -12,6 +12,53 @@ if (process.env.SENDGRID_API_KEY) {
 }
 
 /**
+ * Send email with template
+ * @param {string} userId
+ * @param {object} emailData - { to, subject, html, text }
+ * @param {string} notificationType
+ * @returns {Promise<{ success: boolean, messageId: string|null }>}
+ */
+export async function sendEmailWithTemplate(userId, emailData, notificationType) {
+  try {
+    const { to, subject, html, text } = emailData;
+
+    if (!process.env.SENDGRID_API_KEY) {
+      console.warn('SENDGRID_API_KEY not set, skipping email send');
+      return { success: false, messageId: null };
+    }
+
+    const msg = {
+      to,
+      from: process.env.EMAIL_FROM || 'notifications@jobapp.ai',
+      subject,
+      html,
+      text,
+      trackingSettings: {
+        clickTracking: { enable: true },
+        openTracking: { enable: true },
+      },
+    };
+
+    const response = await sgMail.send(msg);
+
+    // Extract message ID from SendGrid response
+    const messageId = response[0]?.headers?.['x-message-id'] || null;
+
+    return {
+      success: true,
+      messageId,
+    };
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return {
+      success: false,
+      messageId: null,
+      error: error.message,
+    };
+  }
+}
+
+/**
  * Send alert digest email to user
  */
 export async function sendAlertDigest(userId) {
@@ -316,4 +363,5 @@ async function sendViaNodemailer(to, subject, html) {
 export default {
   sendAlertDigest,
   sendApplicationConfirmation,
+  sendEmailWithTemplate,
 };

@@ -1,7 +1,7 @@
 import Dropdown from 'react-bootstrap/Dropdown';
 import neu from '../../assets/images/northeastern.jpg';
 import { useAuthUser } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Outlet, useEffect, useState } from 'react-router-dom';
 import { getUnreadAlertsApi } from '../../services/jobAlert.service';
 import './TopNav.css';
@@ -112,6 +112,8 @@ const TopNav = () => {
                         </Dropdown.Toggle>
                         <Dropdown.Menu>
                             <Dropdown.Item onClick={gotoHomeJob}>Dashboard</Dropdown.Item>
+                            <Dropdown.Item as={Link} to="/joblist/email-analytics">📧 Email Analytics</Dropdown.Item>
+                            <Dropdown.Divider />
                             <Dropdown.Item onClick={handleLogout}>Logout</Dropdown.Item>
                         </Dropdown.Menu>
                     </Dropdown>
